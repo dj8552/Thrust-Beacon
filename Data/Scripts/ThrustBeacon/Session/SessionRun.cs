@@ -1,7 +1,5 @@
-﻿using Sandbox.Game;
-using Sandbox.Game.Entities;
+﻿using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
-using System.Diagnostics;
 using VRage.Game.Components;
 
 namespace ThrustBeacon
@@ -23,7 +21,7 @@ namespace ThrustBeacon
             IsServer = MyAPIGateway.Multiplayer.MultiplayerActive && MyAPIGateway.Session.IsServer;
             DedicatedServer = MyAPIGateway.Utilities.IsDedicated;
             MpActive = MyAPIGateway.Multiplayer.MultiplayerActive;
-            IsClient = !IsServer && !DedicatedServer;// && MpActive;
+            IsClient = !IsServer && !DedicatedServer;
             IsHost = IsServer && !DedicatedServer && MpActive;
             MpServer = IsHost || DedicatedServer || !MpActive;
             if (MpServer)
@@ -34,8 +32,6 @@ namespace ThrustBeacon
             Tick++;
             if (Tick % 60 == 0 && MpServer)
             {
-                var timer = new Stopwatch();//temp
-                timer.Start();//temp
                 foreach (var gridComp in GridList)
                 {
                     if (gridComp.thrustList.Count > 0)
@@ -49,11 +45,6 @@ namespace ThrustBeacon
                     }
                     
                 }
-                timer.Stop();//temp
-                MyAPIGateway.Utilities.ShowNotification("Runtime: " + timer.Elapsed);
-
-
-
                 if (!_startBlocks.IsEmpty || !_startGrids.IsEmpty)
                 StartComps();
             }           

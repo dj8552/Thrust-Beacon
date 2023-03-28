@@ -41,40 +41,40 @@ namespace ThrustBeacon
                 if (name == "arylnx_raider_epstein_drive")
                     divisor =  733;
 
-                else if (name == ("arylnx_quadra_epstein_drive"))
+                else if (name == "arylnx_quadra_epstein_drive")
                     divisor = 625;
 
-                else if (name == ("arylnx_munr_epstein_drive"))
+                else if (name == "arylnx_munr_epstein_drive")
                     divisor = 1385;
 
-                else if (name == ("arylnx_epstein_drive"))
+                else if (name == "arylnx_epstein_drive")
                     divisor = 1000;
 
-                else if (name == ("arylnx_roci_epstein_drive"))
+                else if (name == "arylnx_roci_epstein_drive")
                     divisor = 1138;
 
-                else if (name == ("arylynx_silversmith_epstein_drive"))
+                else if (name == "arylynx_silversmith_epstein_drive")
                     divisor = 1750;
 
-                else if (name == ("arylnx_scircocco_epstein_drive"))
+                else if (name == "arylnx_scircocco_epstein_drive")
                     divisor = 1447;
 
-                else if (name == ("arylnx_mega_epstein_drive"))
+                else if (name == "arylnx_mega_epstein_drive")
                     divisor = 1440;
 
-                else if (name == ("arylnx_rzb_epstein_drive"))
+                else if (name == "arylnx_rzb_epstein_drive")
                     divisor = 1250;
 
-                else if (name == ("aryxlnx_yacht_epstein_drive"))
+                else if (name == "aryxlnx_yacht_epstein_drive")
                     divisor = 1250;
 
-                else if (name == ("arylnx_pndr_epstein_drive"))
+                else if (name == "arylnx_pndr_epstein_drive")
                     divisor = 1052;
 
-                else if (name == ("arylnx_drummer_epstein_drive"))
+                else if (name == "arylnx_drummer_epstein_drive")
                     divisor = 1206;
 
-                else if (name == ("arylnx_leo_epstein_drive"))
+                else if (name == "arylnx_leo_epstein_drive")
                     divisor = 1233;
 
                 else if (name.Contains("rcs"))

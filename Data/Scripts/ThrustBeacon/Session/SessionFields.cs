@@ -19,12 +19,6 @@ namespace ThrustBeacon
         internal readonly List<GridComp> GridList = new List<GridComp>();
         internal readonly ConcurrentDictionary<IMyCubeGrid, GridComp> GridMap = new ConcurrentDictionary<IMyCubeGrid, GridComp>();
 
-
-        public Session()
-        {
-            
-        }
-
         internal void StartComps()
         {
             try
