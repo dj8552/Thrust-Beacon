@@ -33,6 +33,7 @@ namespace ThrustBeacon
             {
                 beaconList.Add(beacon);
                 beacon.EnabledChanged += Beacon_EnabledChanged;
+                beacon.PropertiesChanged += Beacon_PropertiesChanged;
             }
             if (thruster != null)
             {
@@ -95,6 +96,16 @@ namespace ThrustBeacon
                 beacon.Enabled = true;
         }
 
+        private void Beacon_PropertiesChanged(IMyTerminalBlock obj)
+        {
+            var beacon = obj as IMyBeacon;
+            if (beacon.HudText != broadcastMsg || beacon.Radius != broadcastDist)
+            {
+                beacon.Radius = broadcastDist;
+                beacon.HudText = broadcastMsg;
+            }
+        }
+
         internal void FatBlockRemoved(MyCubeBlock block)
         {
             var beacon = block as IMyBeacon;
@@ -103,6 +114,7 @@ namespace ThrustBeacon
             {
                 beaconList.Remove(beacon);
                 beacon.EnabledChanged -= Beacon_EnabledChanged;
+                beacon.PropertiesChanged -= Beacon_PropertiesChanged;
             }
             if (thrust != null)
                 thrustList.Remove(thrust);
@@ -179,7 +191,10 @@ namespace ThrustBeacon
             Grid.OnFatBlockRemoved -= FatBlockRemoved;
             Grid = null;
             foreach (var beacon in beaconList)
+            {
                 beacon.EnabledChanged -= Beacon_EnabledChanged;
+                beacon.PropertiesChanged -= Beacon_PropertiesChanged;
+            }
             beaconList.Clear();
             thrustList.Clear();
             broadcastDist = 0;

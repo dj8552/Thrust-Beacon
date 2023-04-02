@@ -43,6 +43,7 @@ namespace ThrustBeacon
                         beacon.Radius = gridComp.broadcastDist;
                         beacon.HudText = gridComp.broadcastMsg;
                     }
+                    //Grid shutdown mechanic?
                     
                 }
                 if (!_startBlocks.IsEmpty || !_startGrids.IsEmpty)
