@@ -29,8 +29,8 @@ namespace ThrustBeacon
         HudAPIv2 hudAPI;
         WcApi wcAPI;
         public Networking Networking = new Networking(1337); //TODO: Pick a new number based on mod ID
-        internal MyStringId symbol = MyStringId.GetOrCompute("Square"); //update this and TransparentMaterial SBC
-        internal float symbolWidth = 0.025f;
+        internal MyStringId symbol = MyStringId.GetOrCompute("FrameSignal");
+        internal float symbolWidth = 0.02f;
         internal float symbolHeight = 0f;//Leave this as zero, monitor aspect ratio is figured in later
         internal Vector4 color = Color.Red.ToVector4();
 
@@ -112,7 +112,7 @@ namespace ThrustBeacon
                 //TODO: Client side list filtering to deconflict items in WC range
                 //Add desired signals to DrawList
 
-                //temp
+                //temp force feeding without filtering and sample points
                 DrawList.Clear();
                 foreach (var temp in SignalList)
                     DrawList.Add(temp);
@@ -131,20 +131,17 @@ namespace ThrustBeacon
                 var Up = MyAPIGateway.Session.Camera.WorldMatrix.Up;
                 var adjSymbolHeight = symbolHeight / 70 * MyAPIGateway.Session.Camera.FieldOfViewAngle;
 
-                //TODO: Symbol height scaling based on distance?
                 foreach (var signal in DrawList)
                 {
-
-                    //Label
-                    var labelOffset = signal.position;
-                    var screenCoords = Session.Camera.WorldToScreen(ref labelOffset);
+                    var varPos = signal.position;
+                    var screenCoords = Session.Camera.WorldToScreen(ref varPos);
                     if (screenCoords.Z >= 1) continue; //TODO: Signal is off screen
 
                     var symbolPosition = new Vector2D(screenCoords.X, screenCoords.Y);
                     var labelPosition = new Vector2D(screenCoords.X + (symbolHeight * 0.4), screenCoords.Y + (symbolHeight * 0.5));
                     var dispRange = signal.range > 1000 ? signal.range / 1000 + " km" : signal.range + " m";
                     var info = new StringBuilder(signal.message + "\n" + dispRange);
-                    var Label = new HudAPIv2.HUDMessage(info, labelPosition, new Vector2D(0,-0.001), 2, 1, true);
+                    var Label = new HudAPIv2.HUDMessage(info, labelPosition, new Vector2D(0,-0.001), 2, 1, true, true);
                     Label.InitialColor = Color.Red;
                     Label.Visible = true;
                     var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbol, symbolPosition, Color.Red, Width: symbolWidth, Height: symbolHeight, TimeToLive: 2);
