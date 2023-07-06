@@ -140,6 +140,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Data\Scripts\ThrustBeacon\APIs\CoreSystemsApiBase.cs" />
+    <Compile Include="Data\Scripts\ThrustBeacon\APIs\HudAPIv2.cs" />
+    <Compile Include="Data\Scripts\ThrustBeacon\Comp\SignalComp.cs" />
+    <Compile Include="Data\Scripts\ThrustBeacon\Session\Networking.cs" />
+    <Compile Include="Data\Scripts\ThrustBeacon\Session\PacketBase.cs" />
     <Compile Include="Data\Scripts\ThrustBeacon\Session\SessionFields.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Compile>
