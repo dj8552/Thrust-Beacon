@@ -18,6 +18,10 @@ namespace ThrustBeacon
         private readonly ConcurrentCachingList<MyCubeGrid> _startGrids = new ConcurrentCachingList<MyCubeGrid>();
         internal readonly List<GridComp> GridList = new List<GridComp>();
         internal readonly ConcurrentDictionary<IMyCubeGrid, GridComp> GridMap = new ConcurrentDictionary<IMyCubeGrid, GridComp>();
+        internal readonly List<IMyPlayer> PlayerList = new List<IMyPlayer>();
+        internal static List<SignalComp> SignalList = new List<SignalComp>();
+        internal readonly List<SignalComp> DrawList = new List<SignalComp>();
+
 
         internal void StartComps()
         {
@@ -52,12 +56,6 @@ namespace ThrustBeacon
                     if (!GridMap.TryGetValue(block.CubeGrid, out gridComp))
                         continue;
 
-                    var beacon = block as IMyBeacon;
-                    if (beacon != null)
-                    {
-                        gridComp.FatBlockAdded(block);
-                        continue;
-                    }
                     var thruster = block as IMyThrust;
                     if (thruster != null)
                     {
@@ -84,12 +82,6 @@ namespace ThrustBeacon
             if (grid != null)
             {
                 grid.AddedToScene += addToStart => _startGrids.Add(grid);
-            }
-
-            var beacon = entity as IMyBeacon;
-            if (beacon != null)
-            {
-                entity.AddedToScene += addToStart => _startBlocks.Add((MyCubeBlock)beacon); //Thx keen.. MyBeacon is prohibited
             }
 
             var thruster = entity as MyThrust;

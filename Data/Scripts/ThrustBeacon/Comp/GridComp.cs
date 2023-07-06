@@ -7,18 +7,16 @@ namespace ThrustBeacon
 {
     internal class GridComp
     {
-        private Session _session;
         internal MyCubeGrid Grid;
-        internal List<IMyBeacon> beaconList = new List<IMyBeacon>();
         internal Dictionary<IMyThrust, int> thrustList = new Dictionary<IMyThrust, int>();
         internal int broadcastDist;
         internal int broadcastDistOld;
+        internal int broadcastDistSqr;
         internal string broadcastMsg;
         internal VRage.Game.MyCubeSize gridSize;
 
         internal void Init(MyCubeGrid grid, Session session)
         {
-            _session = session;
             Grid = grid;
             Grid.OnFatBlockAdded += FatBlockAdded;
             Grid.OnFatBlockRemoved += FatBlockRemoved;
@@ -27,14 +25,7 @@ namespace ThrustBeacon
 
         internal void FatBlockAdded(MyCubeBlock block)
         {
-            var beacon = block as IMyBeacon;
             var thruster = block as IMyThrust;
-            if (beacon != null)
-            {
-                beaconList.Add(beacon);
-                beacon.EnabledChanged += Beacon_EnabledChanged;
-                beacon.PropertiesChanged += Beacon_PropertiesChanged;
-            }
             if (thruster != null)
             {
                 var name = thruster.BlockDefinition.SubtypeId.ToLower();
@@ -89,33 +80,10 @@ namespace ThrustBeacon
             }
         }
 
-        private void Beacon_EnabledChanged(IMyTerminalBlock obj)
-        {
-            var beacon = obj as IMyBeacon;
-            if (!beacon.Enabled)
-                beacon.Enabled = true;
-        }
-
-        private void Beacon_PropertiesChanged(IMyTerminalBlock obj)
-        {
-            var beacon = obj as IMyBeacon;
-            if (beacon.HudText != broadcastMsg || beacon.Radius != broadcastDist)
-            {
-                beacon.Radius = broadcastDist;
-                beacon.HudText = broadcastMsg;
-            }
-        }
 
         internal void FatBlockRemoved(MyCubeBlock block)
         {
-            var beacon = block as IMyBeacon;
             var thrust = block as IMyThrust;
-            if (beacon != null)
-            {
-                beaconList.Remove(beacon);
-                beacon.EnabledChanged -= Beacon_EnabledChanged;
-                beacon.PropertiesChanged -= Beacon_PropertiesChanged;
-            }
             if (thrust != null)
                 thrustList.Remove(thrust);
         } 
@@ -181,6 +149,8 @@ namespace ThrustBeacon
             {
                 broadcastMsg = "Capital Drive Signature";
             }
+            broadcastDistSqr = broadcastDist * broadcastDist;
+            //TODO:Implement overheat mechanic (signal > 500K)
             return;
         }
     
@@ -190,14 +160,9 @@ namespace ThrustBeacon
             Grid.OnFatBlockAdded -= FatBlockAdded;
             Grid.OnFatBlockRemoved -= FatBlockRemoved;
             Grid = null;
-            foreach (var beacon in beaconList)
-            {
-                beacon.EnabledChanged -= Beacon_EnabledChanged;
-                beacon.PropertiesChanged -= Beacon_PropertiesChanged;
-            }
-            beaconList.Clear();
             thrustList.Clear();
             broadcastDist = 0;
+            broadcastDistSqr = 0;
         }
     }
 }
