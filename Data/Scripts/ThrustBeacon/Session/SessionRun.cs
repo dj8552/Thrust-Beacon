@@ -32,9 +32,7 @@ namespace ThrustBeacon
         internal MyStringId symbol = MyStringId.GetOrCompute("FrameSignal");
         internal float symbolWidth = 0.02f;
         internal float symbolHeight = 0f;//Leave this as zero, monitor aspect ratio is figured in later
-        internal Vector4 color = Color.Red.ToVector4();
-
-
+        internal int viewDist = 0;
 
 
         public override void BeforeStart()
@@ -52,7 +50,7 @@ namespace ThrustBeacon
             if (!IsClient)
             {
                 MyEntities.OnEntityCreate += OnEntityCreate;
-                //TODO: Hook player joining for server and populate PlayerList?
+                //TODO: Hook player joining for server and populate PlayerList, or just jam GetPlayers?
 
             }
             else
@@ -60,6 +58,7 @@ namespace ThrustBeacon
                 hudAPI = new HudAPIv2();
                 wcAPI = new WcApi();
                 wcAPI.Load();
+                viewDist = Math.Min(Session.SessionSettings.SyncDistance, Session.SessionSettings.ViewDistance);
             }
 
         }
@@ -81,6 +80,8 @@ namespace ThrustBeacon
                 }
 
                 //Find player controlled entities in range and broadcast to them
+                PlayerList.Clear();
+                MyAPIGateway.Multiplayer.Players.GetPlayers(PlayerList);//Kinda gross...
                 foreach (var player in PlayerList)
                 {
                     var playerPos = player.GetPosition();
@@ -91,11 +92,12 @@ namespace ThrustBeacon
                     {
                         if (grid.broadcastDist <= 50) continue; //Cull short ranges with practically zero chance of being seen
                         var gridPos = grid.Grid.PositionComp.WorldAABB.Center;
-                        if (Vector3D.DistanceSquared(playerPos, gridPos) <= grid.broadcastDistSqr)
+                        var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
+                        if (distToTargSqr <= grid.broadcastDistSqr || distToTargSqr <= grid.Grid.PositionComp.LocalVolume.Radius * grid.Grid.PositionComp.LocalVolume.Radius)
                         {
                             var signalData = new SignalComp();
                             signalData.position = gridPos;
-                            signalData.range = (int)(Vector3D.Distance(playerPos, gridPos));
+                            signalData.range = (int)Vector3D.Distance(playerPos, gridPos);
                             signalData.message = grid.broadcastMsg;
                             signalData.entityID = grid.Grid.EntityId;
                             tempList.Add(signalData);
@@ -109,40 +111,55 @@ namespace ThrustBeacon
             }
             else if (Tick % 60 == 0 && IsClient)
             {
+                DrawList.Clear();
                 //TODO: Client side list filtering to deconflict items in WC range
                 //Add desired signals to DrawList
 
                 //temp force feeding without filtering and sample points
-                DrawList.Clear();
                 foreach (var temp in SignalList)
                     DrawList.Add(temp);
                 var temp1 = new SignalComp() { message = "Test1", range = 1234, position = new Vector3D(1000,2000,3000), entityID = 0 };
                 var temp2 = new SignalComp() { message = "Test2", range = 4567000, position = new Vector3D(11000, 2000, 3000), entityID = 0 };
+                var temp3 = new SignalComp() { message = "Test3", range = 4567000, position = new Vector3D(101000, 2000, 3000), entityID = 0 };
+
                 DrawList.Add(temp1);
                 DrawList.Add(temp2);
+                DrawList.Add(temp3);
+
                 SignalList.Clear();
             }
         }
 
         public override void Draw()
         {
-            if (IsClient && hudAPI.Heartbeat)
+            if (IsClient && hudAPI.Heartbeat && DrawList.Count > 0)
             {
+                var viewProjectionMat = Session.Camera.ViewMatrix * Session.Camera.ProjectionMatrix;
+                var camPos = Session.Camera.Position;
                 foreach (var signal in DrawList)
                 {
-                    var varPos = signal.position;
-                    var screenCoords = Session.Camera.WorldToScreen(ref varPos);
-                    if (screenCoords.Z >= 1) continue; //TODO: Signal is off screen
+                    var adjustedPos = camPos + Vector3D.Normalize(signal.position - camPos) * viewDist;
+                    var screenCoords = Vector3D.Transform(adjustedPos, viewProjectionMat);
+                    MyAPIGateway.Utilities.ShowNotification($"{signal.message} {screenCoords.X} {screenCoords.Y}  {screenCoords.Z}", 16);
+                    var offScreen = screenCoords.X > 1 || screenCoords.X < -1 || screenCoords.Y > 1 || screenCoords.Y < -1 || screenCoords.Z > 1;
+                    if (!offScreen)
+                    {
+                        var symbolPosition = new Vector2D(screenCoords.X, screenCoords.Y);
+                        var labelPosition = new Vector2D(screenCoords.X + (symbolHeight * 0.4), screenCoords.Y + (symbolHeight * 0.5));
+                        var dispRange = signal.range > 1000 ? signal.range / 1000 + " km" : signal.range + " m";
+                        var info = new StringBuilder(signal.message + "\n" + dispRange);
+                        var Label = new HudAPIv2.HUDMessage(info, labelPosition, new Vector2D(0, -0.001), 2, 1, true, true);
+                        Label.InitialColor = Color.Red;
+                        Label.Visible = true;
+                        var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbol, symbolPosition, Color.Red, Width: symbolWidth, Height: symbolHeight, TimeToLive: 2);
+                    }
+                    else
+                    {
+                        MyAPIGateway.Utilities.ShowNotification($"{signal.message} offscreen",16);
+                        //offscreen
+                    }
 
-                    var symbolPosition = new Vector2D(screenCoords.X, screenCoords.Y);
-                    var labelPosition = new Vector2D(screenCoords.X + (symbolHeight * 0.4), screenCoords.Y + (symbolHeight * 0.5));
-                    var dispRange = signal.range > 1000 ? signal.range / 1000 + " km" : signal.range + " m";
-                    var info = new StringBuilder(signal.message + "\n" + dispRange);
-                    var Label = new HudAPIv2.HUDMessage(info, labelPosition, new Vector2D(0,-0.001), 2, 1, true, true);
-                    Label.InitialColor = Color.Red;
-                    Label.Visible = true;
-                    var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbol, symbolPosition, Color.Red, Width: symbolWidth, Height: symbolHeight, TimeToLive: 2);
-               
+
                 }
             }
         }

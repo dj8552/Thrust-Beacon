@@ -1,8 +1,4 @@
 ﻿using ProtoBuf;
-using Sandbox.Game.Entities;
-using Sandbox.ModAPI;
-using System.Collections.Generic;
-using VRage.Game.ModAPI;
 using VRageMath;
 
 namespace ThrustBeacon

@@ -1,5 +1,4 @@
 ﻿using ProtoBuf;
-using Sandbox.ModAPI;
 using System.Collections.Generic;
 using ThrustBeacon;
 
