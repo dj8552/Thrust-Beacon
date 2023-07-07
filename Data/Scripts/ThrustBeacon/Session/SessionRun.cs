@@ -128,9 +128,6 @@ namespace ThrustBeacon
         {
             if (IsClient && hudAPI.Heartbeat)
             {
-                var Up = MyAPIGateway.Session.Camera.WorldMatrix.Up;
-                var adjSymbolHeight = symbolHeight / 70 * MyAPIGateway.Session.Camera.FieldOfViewAngle;
-
                 foreach (var signal in DrawList)
                 {
                     var varPos = signal.position;

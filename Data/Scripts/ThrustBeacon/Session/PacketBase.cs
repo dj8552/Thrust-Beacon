@@ -27,6 +27,7 @@ namespace Digi.Example_NetworkProtobuf
         /// <returns>Return true if you want the packet to be sent to other clients (only works server side)</returns>
         public bool Received()
         {
+            //TODO:  Handler for multiple servers sending in lists
             Session.SignalList = signalData;
             return false;           
         }
