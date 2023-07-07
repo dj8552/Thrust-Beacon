@@ -33,6 +33,7 @@ namespace ThrustBeacon
         internal MyStringId symbol = MyStringId.GetOrCompute("FrameSignal");
         internal float symbolWidth = 0.02f;
         internal float symbolHeight = 0f;//Leave this as zero, monitor aspect ratio is figured in later
+        internal float aspectRatio = 0f;
         internal int viewDist = 0;
         internal Color signalColor = Color.Red;
 
@@ -68,7 +69,7 @@ namespace ThrustBeacon
         {
             if (symbolHeight == 0)
             {
-                var aspectRatio = Session.Camera.ViewportSize.X / Session.Camera.ViewportSize.Y;
+                aspectRatio = Session.Camera.ViewportSize.X / Session.Camera.ViewportSize.Y;
                 symbolHeight = symbolWidth * aspectRatio;
             }
 
@@ -168,6 +169,7 @@ namespace ThrustBeacon
                 byte colorFade = (byte)(255 - (Tick % 180) * 0.75);
                 signalColor.R = colorFade;
                 signalColor.A = colorFade;
+                //TODO: Add zoom FOV scaling
 
                 foreach (var signal in DrawList)
                 {
@@ -187,6 +189,53 @@ namespace ThrustBeacon
                     }
                     else
                     {
+                        if (screenCoords.Z > 1)//Camera is between player and target
+                        {
+                            screenCoords.X = -screenCoords.X;
+                            screenCoords.Y = -screenCoords.Y;
+                        }
+                        var screenEdgeX = 0f;
+                        var screenEdgeY = 0f;
+                        var rotation = 0;
+                        var edgeSymLen = 0.98f; //Less than 1 to space off the edge slightly
+                        //TODO: get symbol to place with an even gap on top and left of screen.  Suspect aspectRatio is playing into this, needs a dynamic solution
+                        if (Math.Abs(screenCoords.X) > Math.Abs(screenCoords.Y))
+                        {
+                            if (screenCoords.X < 0)//left edge
+                            {
+                                var divider = screenCoords.X / -edgeSymLen;
+                                screenEdgeX = -edgeSymLen;
+                                screenEdgeY = (float)(screenCoords.Y / divider);
+                                rotation = 0;//Sort out what value this needs to be set to 
+                            }
+                            else//right edge
+                            {
+                                var divider = screenCoords.X / edgeSymLen;
+                                screenEdgeX = edgeSymLen;
+                                screenEdgeY = (float)(screenCoords.Y / divider);
+                                rotation = 0;//Sort out what value this needs to be set to 
+                            }
+                        }
+                        else
+                        {
+                            if (screenCoords.Y < 0)//bottom edge
+                            {
+                                var divider = screenCoords.Y / -edgeSymLen;
+                                screenEdgeY = -edgeSymLen;
+                                screenEdgeX = (float)(screenCoords.X / divider);
+                                rotation = 0;//Sort out what value this needs to be set to 
+                            }
+                            else//top edge
+                            {
+                                var divider = screenCoords.Y / edgeSymLen;
+                                screenEdgeY = edgeSymLen;
+                                screenEdgeX = (float)(screenCoords.X / divider);
+                                rotation = 0;//Sort out what value this needs to be set to 
+                            }
+                        }
+                        MyAPIGateway.Utilities.ShowNotification($"{signal.message}  {screenEdgeX}  {screenEdgeY}", 16);
+                        var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbol, new Vector2D(screenEdgeX, screenEdgeY), signalColor, Width: symbolWidth * 2, Height: symbolHeight * 2, TimeToLive: 2, Rotation: rotation);
+
                         //TODO: handle offscreen indicators
                     }
 
