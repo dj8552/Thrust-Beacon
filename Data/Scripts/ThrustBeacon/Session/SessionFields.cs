@@ -3,6 +3,7 @@ using Sandbox.ModAPI;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using VRage;
 using VRage.Collections;
 using VRage.Game.Components;
 using VRage.Game.Entity;
@@ -20,7 +21,12 @@ namespace ThrustBeacon
         internal readonly ConcurrentDictionary<IMyCubeGrid, GridComp> GridMap = new ConcurrentDictionary<IMyCubeGrid, GridComp>();
         internal List<IMyPlayer> PlayerList = new List<IMyPlayer>();
         internal static List<SignalComp> SignalList = new List<SignalComp>();
-        internal readonly List<SignalComp> DrawList = new List<SignalComp>();
+        internal List<SignalComp> DrawList = new List<SignalComp>();
+        internal ICollection<MyTuple<MyEntity, float>> threatList = new List<MyTuple<MyEntity, float>>();
+        internal ICollection<MyEntity> obsList = new List<MyEntity>();
+        internal List<long> entityIDList = new List<long>();
+
+
 
 
         internal void StartComps()

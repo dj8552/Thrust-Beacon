@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Text;
 using VRage.Game;
 using VRage.Game.Components;
+using VRage.Game.Entity;
 using VRage.Utils;
 using VRageMath;
 
@@ -33,6 +34,7 @@ namespace ThrustBeacon
         internal float symbolWidth = 0.02f;
         internal float symbolHeight = 0f;//Leave this as zero, monitor aspect ratio is figured in later
         internal int viewDist = 0;
+        internal Color signalColor = Color.Red;
 
 
         public override void BeforeStart()
@@ -112,20 +114,46 @@ namespace ThrustBeacon
             else if (Tick % 60 == 0 && IsClient)
             {
                 DrawList.Clear();
-                //TODO: Client side list filtering to deconflict items in WC range
-                //Add desired signals to DrawList
+                entityIDList.Clear();
+                
+                var controlledEnt = MyAPIGateway.Session?.Player?.Controller?.ControlledEntity?.Entity?.Parent;
+                
+                if (controlledEnt != null && controlledEnt is MyCubeGrid)
+                {
+                    var myEnt = (MyEntity)controlledEnt;
+                    wcAPI.GetSortedThreats(myEnt, threatList);
+                    foreach(var item in threatList)
+                    {
+                        entityIDList.Add(item.Item1.EntityId);
+                    }
+                    wcAPI.GetObstructions(myEnt, obsList);
+                    foreach(var item in obsList)
+                    {
+                        entityIDList.Add(item.EntityId);
+                    }
+                }
+                
+                if (entityIDList.Count > 0)
+                {
+                    foreach (var signal in SignalList)
+                    {
+                        if (entityIDList.Contains(signal.entityID))
+                            continue;
+                        DrawList.Add(signal);
+                    }
+                }
+                else if (SignalList.Count > 0)
+                    DrawList = SignalList; //no WC contacts to deconflict
+                
 
-                //temp force feeding without filtering and sample points
-                foreach (var temp in SignalList)
-                    DrawList.Add(temp);
+                //temp sample points
                 var temp1 = new SignalComp() { message = "Test1", range = 1234, position = new Vector3D(1000,2000,3000), entityID = 0 };
                 var temp2 = new SignalComp() { message = "Test2", range = 4567000, position = new Vector3D(11000, 2000, 3000), entityID = 0 };
                 var temp3 = new SignalComp() { message = "Test3", range = 4567000, position = new Vector3D(101000, 2000, 3000), entityID = 0 };
-
                 DrawList.Add(temp1);
                 DrawList.Add(temp2);
                 DrawList.Add(temp3);
-
+                //end of temp
                 SignalList.Clear();
             }
         }
@@ -136,11 +164,15 @@ namespace ThrustBeacon
             {
                 var viewProjectionMat = Session.Camera.ViewMatrix * Session.Camera.ProjectionMatrix;
                 var camPos = Session.Camera.Position;
+                //TODO: Color fading may be interesting, timing brightness increase to a position update?
+                byte colorFade = (byte)(255 - (Tick % 180) * 0.75);
+                signalColor.R = colorFade;
+                signalColor.A = colorFade;
+
                 foreach (var signal in DrawList)
                 {
                     var adjustedPos = camPos + Vector3D.Normalize(signal.position - camPos) * viewDist;
                     var screenCoords = Vector3D.Transform(adjustedPos, viewProjectionMat);
-                    MyAPIGateway.Utilities.ShowNotification($"{signal.message} {screenCoords.X} {screenCoords.Y}  {screenCoords.Z}", 16);
                     var offScreen = screenCoords.X > 1 || screenCoords.X < -1 || screenCoords.Y > 1 || screenCoords.Y < -1 || screenCoords.Z > 1;
                     if (!offScreen)
                     {
@@ -149,14 +181,13 @@ namespace ThrustBeacon
                         var dispRange = signal.range > 1000 ? signal.range / 1000 + " km" : signal.range + " m";
                         var info = new StringBuilder(signal.message + "\n" + dispRange);
                         var Label = new HudAPIv2.HUDMessage(info, labelPosition, new Vector2D(0, -0.001), 2, 1, true, true);
-                        Label.InitialColor = Color.Red;
+                        Label.InitialColor = signalColor;
                         Label.Visible = true;
-                        var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbol, symbolPosition, Color.Red, Width: symbolWidth, Height: symbolHeight, TimeToLive: 2);
+                        var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbol, symbolPosition, signalColor, Width: symbolWidth, Height: symbolHeight, TimeToLive: 2);
                     }
                     else
                     {
-                        MyAPIGateway.Utilities.ShowNotification($"{signal.message} offscreen",16);
-                        //offscreen
+                        //TODO: handle offscreen indicators
                     }
 
 
@@ -180,6 +211,8 @@ namespace ThrustBeacon
             GridList.Clear();
             SignalList.Clear();
             DrawList.Clear();
+            threatList.Clear();
+            obsList.Clear();
         }
     }
 }
