@@ -35,6 +35,7 @@ namespace ThrustBeacon
         internal float symbolHeight = 0f;//Leave this as zero, monitor aspect ratio is figured in later
         internal float aspectRatio = 0f;
         internal int viewDist = 0;
+        internal int cullDist = 2500;
         internal Color signalColor = Color.Red;
 
 
@@ -53,7 +54,7 @@ namespace ThrustBeacon
             if (!IsClient)
             {
                 MyEntities.OnEntityCreate += OnEntityCreate;
-                //TODO: Hook player joining for server and populate PlayerList, or just jam GetPlayers?
+                //TODO: Hook player joining for server and populate PlayerList, or just jam GetPlayers in Update?
 
             }
             else
@@ -79,7 +80,7 @@ namespace ThrustBeacon
                 foreach (var gridComp in GridList)
                 {
                     if (gridComp.thrustList.Count > 0)
-                        gridComp.CalcThrust();
+                        gridComp.CalcThrust();//TODO: See if there's a better way to account for pulsing/blipping the gas
                 }
 
                 //Find player controlled entities in range and broadcast to them
@@ -93,7 +94,7 @@ namespace ThrustBeacon
                     var tempList = new List<SignalComp>();
                     foreach (var grid in GridList)
                     {
-                        if (grid.broadcastDist <= 50) continue; //Cull short ranges with practically zero chance of being seen
+                        if (grid.broadcastDist <= cullDist) continue; //Cull short ranges that are definitely in radar range
                         var gridPos = grid.Grid.PositionComp.WorldAABB.Center;
                         var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
                         if (distToTargSqr <= grid.broadcastDistSqr || distToTargSqr <= grid.Grid.PositionComp.LocalVolume.Radius * grid.Grid.PositionComp.LocalVolume.Radius)
@@ -157,6 +158,13 @@ namespace ThrustBeacon
                 //end of temp
                 SignalList.Clear();
             }
+            
+            if (Tick % 5 == 0 && !IsClient && shutdownList.Count > 0)
+            {
+                foreach (var gridComp in shutdownList) //TODO: Check for any risk of this being altered while iterating
+                    gridComp.TogglePower();
+            }
+        
         }
 
         public override void Draw()
@@ -185,7 +193,7 @@ namespace ThrustBeacon
                         var Label = new HudAPIv2.HUDMessage(info, labelPosition, new Vector2D(0, -0.001), 2, 1, true, true);
                         Label.InitialColor = signalColor;
                         Label.Visible = true;
-                        var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbol, symbolPosition, signalColor, Width: symbolWidth, Height: symbolHeight, TimeToLive: 2);
+                        var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbol, symbolPosition, signalColor, Width: symbolWidth, Height: symbolHeight, TimeToLive: 2, HideHud: true);
                     }
                     else
                     {
@@ -262,6 +270,7 @@ namespace ThrustBeacon
             DrawList.Clear();
             threatList.Clear();
             obsList.Clear();
+            shutdownList.Clear();
         }
     }
 }

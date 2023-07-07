@@ -25,6 +25,7 @@ namespace ThrustBeacon
         internal ICollection<MyTuple<MyEntity, float>> threatList = new List<MyTuple<MyEntity, float>>();
         internal ICollection<MyEntity> obsList = new List<MyEntity>();
         internal List<long> entityIDList = new List<long>();
+        internal static List<GridComp> shutdownList = new List<GridComp>();
 
 
 

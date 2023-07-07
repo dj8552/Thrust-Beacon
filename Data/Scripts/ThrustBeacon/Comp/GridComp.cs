@@ -9,6 +9,8 @@ namespace ThrustBeacon
     {
         internal MyCubeGrid Grid;
         internal Dictionary<IMyThrust, int> thrustList = new Dictionary<IMyThrust, int>();
+        internal List<IMyPowerProducer> powerList = new List<IMyPowerProducer>();
+        internal bool powerShutdown = false;
         internal int broadcastDist;
         internal int broadcastDistOld;
         internal int broadcastDistSqr;
@@ -25,13 +27,17 @@ namespace ThrustBeacon
 
         internal void FatBlockAdded(MyCubeBlock block)
         {
+            var power = block as IMyPowerProducer;
+            if (power != null)
+                powerList.Add(power);
+
             var thruster = block as IMyThrust;
             if (thruster != null)
             {
                 var name = thruster.BlockDefinition.SubtypeId.ToLower();
                 int divisor;
                 if (name == "arylnx_raider_epstein_drive")
-                    divisor =  733;
+                    divisor = 733;
 
                 else if (name == "arylnx_quadra_epstein_drive")
                     divisor = 625;
@@ -86,8 +92,11 @@ namespace ThrustBeacon
             var thrust = block as IMyThrust;
             if (thrust != null)
                 thrustList.Remove(thrust);
-        } 
-        
+            var power = block as IMyPowerProducer;
+            if (power != null)
+                powerList.Remove(power);
+        }
+
         internal void CalcThrust()
         {
             broadcastDistOld = broadcastDist;
@@ -103,11 +112,7 @@ namespace ThrustBeacon
                 }
                 broadcastDist = (int)rawThrustOutput;
             }
-            else
-            {
-                broadcastDist = 1;
-            }
-            if (broadcastDistOld > broadcastDist)
+            if (broadcastDistOld > broadcastDist || Grid.IsStatic)
             {
                 if (gridSize == 0)
                     broadcastDist = (int)(broadcastDistOld * 0.95f);
@@ -125,7 +130,7 @@ namespace ThrustBeacon
             {
                 broadcastMsg = "Small Drive Signature";
             }
-            else if (broadcastDist>= 8001f && broadcastDist < 25000f)
+            else if (broadcastDist >= 8001f && broadcastDist < 25000f)
             {
                 broadcastMsg = "Medium Drive Signature";
             }
@@ -141,19 +146,25 @@ namespace ThrustBeacon
             {
                 broadcastMsg = "Massive Drive Signature";
             }
-            else if (broadcastDist >= 500001f && broadcastDist < 1000000f)
+            else if (broadcastDist >= 500001f)
             {
                 broadcastMsg = "Immense Drive Signature";
             }
-            else if (broadcastDist >= 1000001f)
-            {
-                broadcastMsg = "Capital Drive Signature";
-            }
+
+            if (broadcastDist >= 500000 && !powerShutdown)
+                Session.shutdownList.Add(this);
+            else if (broadcastDist < 500000 && powerShutdown)
+                Session.shutdownList.Remove(this);
             broadcastDistSqr = broadcastDist * broadcastDist;
-            //TODO:Implement overheat mechanic (signal > 500K)
             return;
         }
-    
+
+        internal void TogglePower()
+        {
+            foreach (var power in powerList)
+                if (!power.MarkedForClose && power.Enabled)
+                    power.Enabled = false;
+        }
 
         internal void Clean()
         {
@@ -161,6 +172,7 @@ namespace ThrustBeacon
             Grid.OnFatBlockRemoved -= FatBlockRemoved;
             Grid = null;
             thrustList.Clear();
+            powerList.Clear();
             broadcastDist = 0;
             broadcastDistSqr = 0;
         }

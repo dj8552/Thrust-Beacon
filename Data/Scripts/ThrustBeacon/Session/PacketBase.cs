@@ -27,7 +27,11 @@ namespace Digi.Example_NetworkProtobuf
         public bool Received()
         {
             //TODO:  Handler for multiple servers sending in lists
-            Session.SignalList = signalData;
+            foreach (var signalRcvd in signalData)
+            {
+                if (!Session.SignalList.Contains(signalRcvd))
+                    Session.SignalList.Add(signalRcvd);
+            }
             return false;           
         }
     }
