@@ -88,20 +88,25 @@ namespace ThrustBeacon
                 MyAPIGateway.Multiplayer.Players.GetPlayers(PlayerList);//Kinda gross...
                 foreach (var player in PlayerList)
                 {
-                    var playerPos = player.GetPosition();
+                    //var playerPos = player.GetPosition();
+                    var playerPos = player.Controller?.ControlledEntity?.Entity?.PositionComp.WorldAABB.Center;
                     var playerSteamID = player.SteamUserId;
-                    if (playerPos == null || playerPos == Vector3D.Zero || playerSteamID == 0) continue;
+                    if (playerPos == null || playerPos == Vector3D.Zero || playerSteamID == 0)
+                    {
+                        MyLog.Default.WriteLineAndConsole($"Player error - playerPos{playerPos}  playerSteamID{playerSteamID}");
+                        continue;
+                    }
                     var tempList = new List<SignalComp>();
                     foreach (var grid in GridList)
                     {
                         if (grid.broadcastDist <= cullDist) continue; //Cull short ranges that are definitely in radar range
                         var gridPos = grid.Grid.PositionComp.WorldAABB.Center;
-                        var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
+                        var distToTargSqr = Vector3D.DistanceSquared((Vector3D)playerPos, gridPos);
                         if (distToTargSqr <= grid.broadcastDistSqr || distToTargSqr <= grid.Grid.PositionComp.LocalVolume.Radius * grid.Grid.PositionComp.LocalVolume.Radius)
                         {
                             var signalData = new SignalComp();
                             signalData.position = gridPos;
-                            signalData.range = (int)Vector3D.Distance(playerPos, gridPos);
+                            signalData.range = (int)Vector3D.Distance((Vector3D)playerPos, gridPos);
                             signalData.message = grid.broadcastMsg;
                             signalData.entityID = grid.Grid.EntityId;
                             tempList.Add(signalData);
