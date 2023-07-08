@@ -104,10 +104,9 @@ namespace ThrustBeacon
                     var tempList = new List<SignalComp>();
                     foreach (var grid in GridList)
                     {
-                        if (grid.broadcastDist <= cullDist) continue; //Cull short ranges that are definitely in radar range
                         var gridPos = grid.Grid.PositionComp.WorldAABB.Center;
                         var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
-                        if (distToTargSqr <= grid.broadcastDistSqr || distToTargSqr <= grid.Grid.PositionComp.LocalVolume.Radius * grid.Grid.PositionComp.LocalVolume.Radius)
+                        if (distToTargSqr <= grid.broadcastDistSqr)
                         {
                             var signalData = new SignalComp();
                             signalData.position = gridPos;
@@ -187,7 +186,6 @@ namespace ThrustBeacon
                 byte colorFade = (byte)(255 - (Tick % 180) * 0.75);
                 signalColor.R = colorFade;
                 signalColor.A = colorFade;
-                //TODO: Add zoom FOV scaling
 
                 foreach (var signal in DrawList)
                 {
@@ -267,14 +265,11 @@ namespace ThrustBeacon
                                     rotation = 0;//Sort out what value this needs to be set to 
                                 }
                             }
-                            //MyAPIGateway.Utilities.ShowNotification($"{signal.message}  {screenEdgeX},{screenEdgeY} {xOffset},{yOffset}", 16);
                             var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbol, new Vector2D(screenEdgeX, screenEdgeY), signalColor, Width: offScreenIconWidth, Height: offScreenIconHeight, TimeToLive: 2, Rotation: rotation);
                         }
-                        //TODO: handle offscreen indicators
                     }
-
-
                 }
+                //TODO: own signal display on screen?
             }
         }
         protected override void UnloadData()
