@@ -213,7 +213,6 @@ namespace ThrustBeacon
                         var screenEdgeY = screenCoords.Y;
                         var rotation = 0;
                         var viewportSize = MyAPIGateway.Session.Camera.ViewportSize;
-                        var edgeSymLen = 0.98f; //Less than 1 to space off the edge slightly
                         var xOffset = 1.0f - (offScreenIconWidth / 2);
                         var yOffset = 1.0f - (offScreenIconHeight / 2);
 
@@ -235,7 +234,6 @@ namespace ThrustBeacon
                         {
                             screenEdgeY = yOffset;
                         }
-                        MyAPIGateway.Utilities.ShowNotification($"{signal.message}  {screenEdgeX}  {screenEdgeY} {edgeSymLen}", 16);
                         var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbol, new Vector2D(screenEdgeX, screenEdgeY), signalColor, Width: offScreenIconWidth, Height: offScreenIconHeight, TimeToLive: 2, Rotation: rotation);
 
                         //TODO: handle offscreen indicators
