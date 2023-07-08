@@ -191,6 +191,7 @@ namespace ThrustBeacon
                     var offScreen = screenCoords.X > 1 || screenCoords.X < -1 || screenCoords.Y > 1 || screenCoords.Y < -1 || screenCoords.Z > 1;
                     if (!offScreen)
                     {
+                        
                         var symbolPosition = new Vector2D(screenCoords.X, screenCoords.Y);
                         var labelPosition = new Vector2D(screenCoords.X + (symbolHeight * 0.4), screenCoords.Y + (symbolHeight * 0.5));
                         var dispRange = signal.range > 1000 ? signal.range / 1000 + " km" : signal.range + " m";
@@ -202,54 +203,53 @@ namespace ThrustBeacon
                     }
                     else
                     {
+                        var offScreenIconWidth = symbolWidth * 2;
+                        var offScreenIconHeight = symbolHeight * 2;
+                        var xOffset = 1.0f - (offScreenIconWidth / 2);
+                        var yOffset = 1.0f - (offScreenIconHeight / 2);
                         if (screenCoords.Z > 1)//Camera is between player and target
                         {
                             screenCoords.X = -screenCoords.X;
                             screenCoords.Y = -screenCoords.Y;
                         }
-                        var offScreenIconWidth = symbolWidth * 2;
-                        var offScreenIconHeight = symbolHeight * 2;
                         var screenEdgeX = 0f;
                         var screenEdgeY = 0f;
                         var rotation = 0;
-                        var viewportSize = MyAPIGateway.Session.Camera.ViewportSize;
-                        var edgeSymLen = 0.98f; //Less than 1 to space off the edge slightly
-                        var xOffset = 1.0f - (offScreenIconWidth / 2);
-                        var yOffset = 1.0f - (offScreenIconHeight / 2);
-                        //TODO: get symbol to place with an even gap on top and left of screen.  Suspect aspectRatio is playing into this, needs a dynamic solution
                         if (Math.Abs(screenCoords.X) > Math.Abs(screenCoords.Y))
                         {
                             if (screenCoords.X < 0)//left edge
                             {
+                                var divider = screenCoords.X / -xOffset;
                                 screenEdgeX = -xOffset;
-                                screenEdgeY = (float)(screenCoords.Y);
+                                screenEdgeY = (float)(screenCoords.Y / divider);
                                 rotation = 0;//Sort out what value this needs to be set to 
                             }
                             else//right edge
                             {
+                                var divider = screenCoords.X / xOffset;
                                 screenEdgeX = xOffset;
-                                screenEdgeY = (float)(screenCoords.Y);
+                                screenEdgeY = (float)(screenCoords.Y / divider);
                                 rotation = 0;//Sort out what value this needs to be set to 
                             }
                         }
                         else
                         {
-                            var offset = offScreenIconHeight / 2;
-                            edgeSymLen = 1.0f - offset;
                             if (screenCoords.Y < 0)//bottom edge
                             {
-                                screenEdgeY = -edgeSymLen;
-                                screenEdgeX = (float)(screenCoords.X);
+                                var divider = screenCoords.Y / -yOffset;
+                                screenEdgeY = -yOffset;
+                                screenEdgeX = (float)(screenCoords.X / divider);
                                 rotation = 0;//Sort out what value this needs to be set to 
                             }
                             else//top edge
                             {
-                                screenEdgeY = edgeSymLen;
-                                screenEdgeX = (float)(screenCoords.X);
+                                var divider = screenCoords.Y / yOffset;
+                                screenEdgeY = yOffset;
+                                screenEdgeX = (float)(screenCoords.X / divider);
                                 rotation = 0;//Sort out what value this needs to be set to 
                             }
                         }
-                        MyAPIGateway.Utilities.ShowNotification($"{signal.message}  {screenEdgeX}  {screenEdgeY} {edgeSymLen}", 16);
+                        //MyAPIGateway.Utilities.ShowNotification($"{signal.message}  {screenEdgeX},{screenEdgeY} {xOffset},{yOffset}", 16);
                         var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbol, new Vector2D(screenEdgeX, screenEdgeY), signalColor, Width: offScreenIconWidth, Height: offScreenIconHeight, TimeToLive: 2, Rotation: rotation);
 
                         //TODO: handle offscreen indicators
