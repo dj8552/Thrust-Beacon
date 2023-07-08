@@ -31,9 +31,14 @@ namespace ThrustBeacon
         WcApi wcAPI;
         public Networking Networking = new Networking(1337); //TODO: Pick a new number based on mod ID
         internal MyStringId symbol = MyStringId.GetOrCompute("FrameSignal");
+        internal MyStringId symbolOffscreen = MyStringId.GetOrCompute("Arrow");
+
         internal float symbolWidth = 0.02f;
         internal float symbolHeight = 0f;//Leave this as zero, monitor aspect ratio is figured in later
+        internal float offscreenWidth = 0.025f;
+        internal float offscreenHeight = 0.05f;
         internal float aspectRatio = 0f;
+        internal Vector2D offscreenSquish = new Vector2D(0.9, 0.7);
         internal int viewDist = 0;
         internal int cullDist = 2500;
         internal Color signalColor = Color.Red;
@@ -72,6 +77,7 @@ namespace ThrustBeacon
             {
                 aspectRatio = Session.Camera.ViewportSize.X / Session.Camera.ViewportSize.Y;
                 symbolHeight = symbolWidth * aspectRatio;
+                offscreenHeight *= aspectRatio;
             }
 
             Tick++;
@@ -202,55 +208,68 @@ namespace ThrustBeacon
                     }
                     else
                     {
-                        var offScreenIconWidth = symbolWidth * 2;
-                        var offScreenIconHeight = symbolHeight * 2;
-                        var xOffset = 1.0f - (offScreenIconWidth / 2);
-                        var yOffset = 1.0f - (offScreenIconHeight / 2);
-                        if (screenCoords.Z > 1)//Camera is between player and target
+                        if (true)//Circular clamped indicators
                         {
-                            screenCoords.X = -screenCoords.X;
-                            screenCoords.Y = -screenCoords.Y;
-                        }
-                        var screenEdgeX = 0f;
-                        var screenEdgeY = 0f;
-                        var rotation = 0;
-                        if (Math.Abs(screenCoords.X) > Math.Abs(screenCoords.Y))
-                        {
-                            if (screenCoords.X < 0)//left edge
-                            {
-                                var divider = screenCoords.X / -xOffset;
-                                screenEdgeX = -xOffset;
-                                screenEdgeY = (float)(screenCoords.Y / divider);
-                                rotation = 0;//Sort out what value this needs to be set to 
-                            }
-                            else//right edge
-                            {
-                                var divider = screenCoords.X / xOffset;
-                                screenEdgeX = xOffset;
-                                screenEdgeY = (float)(screenCoords.Y / divider);
-                                rotation = 0;//Sort out what value this needs to be set to 
-                            }
-                        }
-                        else
-                        {
-                            if (screenCoords.Y < 0)//bottom edge
-                            {
-                                var divider = screenCoords.Y / -yOffset;
-                                screenEdgeY = -yOffset;
-                                screenEdgeX = (float)(screenCoords.X / divider);
-                                rotation = 0;//Sort out what value this needs to be set to 
-                            }
-                            else//top edge
-                            {
-                                var divider = screenCoords.Y / yOffset;
-                                screenEdgeY = yOffset;
-                                screenEdgeX = (float)(screenCoords.X / divider);
-                                rotation = 0;//Sort out what value this needs to be set to 
-                            }
-                        }
-                        //MyAPIGateway.Utilities.ShowNotification($"{signal.message}  {screenEdgeX},{screenEdgeY} {xOffset},{yOffset}", 16);
-                        var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbol, new Vector2D(screenEdgeX, screenEdgeY), signalColor, Width: offScreenIconWidth, Height: offScreenIconHeight, TimeToLive: 2, Rotation: rotation);
+                            if (screenCoords.Z > 1)//Camera is between player and target
+                                screenCoords *= -1;
+                            var vectorToPt = new Vector2D(screenCoords.X, screenCoords.Y);
+                            vectorToPt.Normalize();
+                            vectorToPt *= offscreenSquish;
+                            var rotation = (float)Math.Atan2(screenCoords.X, screenCoords.Y);
+                            var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbolOffscreen, vectorToPt, signalColor, Width: offscreenWidth, Height: offscreenHeight, TimeToLive: 2, Rotation: rotation);
 
+                        }
+                        else //Legacy edge of screen indicators
+                        {
+                            var offScreenIconWidth = symbolWidth * 2;
+                            var offScreenIconHeight = symbolHeight * 2;
+                            var xOffset = 1.0f - (offScreenIconWidth / 2);
+                            var yOffset = 1.0f - (offScreenIconHeight / 2);
+                            if (screenCoords.Z > 1)//Camera is between player and target
+                            {
+                                screenCoords.X = -screenCoords.X;
+                                screenCoords.Y = -screenCoords.Y;
+                            }
+                            var screenEdgeX = 0f;
+                            var screenEdgeY = 0f;
+                            var rotation = 0;
+                            if (Math.Abs(screenCoords.X) > Math.Abs(screenCoords.Y))
+                            {
+                                if (screenCoords.X < 0)//left edge
+                                {
+                                    var divider = screenCoords.X / -xOffset;
+                                    screenEdgeX = -xOffset;
+                                    screenEdgeY = (float)(screenCoords.Y / divider);
+                                    rotation = 0;//Sort out what value this needs to be set to 
+                                }
+                                else//right edge
+                                {
+                                    var divider = screenCoords.X / xOffset;
+                                    screenEdgeX = xOffset;
+                                    screenEdgeY = (float)(screenCoords.Y / divider);
+                                    rotation = 0;//Sort out what value this needs to be set to 
+                                }
+                            }
+                            else
+                            {
+                                if (screenCoords.Y < 0)//bottom edge
+                                {
+                                    var divider = screenCoords.Y / -yOffset;
+                                    screenEdgeY = -yOffset;
+                                    screenEdgeX = (float)(screenCoords.X / divider);
+                                    rotation = 0;//Sort out what value this needs to be set to 
+                                }
+                                else//top edge
+                                {
+                                    var divider = screenCoords.Y / yOffset;
+                                    screenEdgeY = yOffset;
+                                    screenEdgeX = (float)(screenCoords.X / divider);
+                                    rotation = 0;//Sort out what value this needs to be set to 
+                                }
+                            }
+                            //MyAPIGateway.Utilities.ShowNotification($"{signal.message}  {screenEdgeX},{screenEdgeY} {xOffset},{yOffset}", 16);
+                            var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbol, new Vector2D(screenEdgeX, screenEdgeY), signalColor, Width: offScreenIconWidth, Height: offScreenIconHeight, TimeToLive: 2, Rotation: rotation);
+                        }
                         //TODO: handle offscreen indicators
                     }
 
