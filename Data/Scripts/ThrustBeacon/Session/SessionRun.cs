@@ -88,12 +88,11 @@ namespace ThrustBeacon
                 MyAPIGateway.Multiplayer.Players.GetPlayers(PlayerList);//Kinda gross...
                 foreach (var player in PlayerList)
                 {
-                    //var playerPos = player.GetPosition();
-                    var playerPos = player.Controller?.ControlledEntity?.Entity?.PositionComp.WorldAABB.Center;
-                    var playerSteamID = player.SteamUserId;
-                    if (playerPos == null || playerPos == Vector3D.Zero || playerSteamID == 0)
+                    if (player.Character == null || player.SteamUserId == 0) continue;
+                    var playerPos = player.Character.WorldAABB.Center;
+                    if (playerPos == Vector3D.Zero)
                     {
-                        MyLog.Default.WriteLineAndConsole($"Player error - playerPos{playerPos}  playerSteamID{playerSteamID}");
+                        MyLog.Default.WriteLineAndConsole($"Player position error - Vector3D.Zero - player.SteamUserId{player.SteamUserId}");
                         continue;
                     }
                     var tempList = new List<SignalComp>();
@@ -101,7 +100,7 @@ namespace ThrustBeacon
                     {
                         if (grid.broadcastDist <= cullDist) continue; //Cull short ranges that are definitely in radar range
                         var gridPos = grid.Grid.PositionComp.WorldAABB.Center;
-                        var distToTargSqr = Vector3D.DistanceSquared((Vector3D)playerPos, gridPos);
+                        var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
                         if (distToTargSqr <= grid.broadcastDistSqr || distToTargSqr <= grid.Grid.PositionComp.LocalVolume.Radius * grid.Grid.PositionComp.LocalVolume.Radius)
                         {
                             var signalData = new SignalComp();
@@ -113,7 +112,7 @@ namespace ThrustBeacon
                         }
                     }
                     if (tempList.Count > 0)
-                        Networking.SendToPlayer(new PacketBase(tempList), playerSteamID);
+                        Networking.SendToPlayer(new PacketBase(tempList), player.SteamUserId);
                 }
                 if (!_startBlocks.IsEmpty || !_startGrids.IsEmpty)
                 StartComps();              
