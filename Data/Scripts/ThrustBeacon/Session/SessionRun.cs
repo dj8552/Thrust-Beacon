@@ -207,47 +207,36 @@ namespace ThrustBeacon
                             screenCoords.X = -screenCoords.X;
                             screenCoords.Y = -screenCoords.Y;
                         }
-                        var screenEdgeX = 0f;
-                        var screenEdgeY = 0f;
+                        var offScreenIconWidth = symbolWidth * 2;
+                        var offScreenIconHeight = symbolHeight * 2;
+                        var screenEdgeX = screenCoords.X;
+                        var screenEdgeY = screenCoords.Y;
                         var rotation = 0;
+                        var viewportSize = MyAPIGateway.Session.Camera.ViewportSize;
                         var edgeSymLen = 0.98f; //Less than 1 to space off the edge slightly
-                        //TODO: get symbol to place with an even gap on top and left of screen.  Suspect aspectRatio is playing into this, needs a dynamic solution
-                        if (Math.Abs(screenCoords.X) > Math.Abs(screenCoords.Y))
+                        var xOffset = 1.0f - (offScreenIconWidth / 2);
+                        var yOffset = 1.0f - (offScreenIconHeight / 2);
+
+                        rotation = 0;//Sort out what value this needs to be set to 
+                        if (screenCoords.X < -xOffset)//left edge
                         {
-                            if (screenCoords.X < 0)//left edge
-                            {
-                                var divider = screenCoords.X / -edgeSymLen;
-                                screenEdgeX = -edgeSymLen;
-                                screenEdgeY = (float)(screenCoords.Y / divider);
-                                rotation = 0;//Sort out what value this needs to be set to 
-                            }
-                            else//right edge
-                            {
-                                var divider = screenCoords.X / edgeSymLen;
-                                screenEdgeX = edgeSymLen;
-                                screenEdgeY = (float)(screenCoords.Y / divider);
-                                rotation = 0;//Sort out what value this needs to be set to 
-                            }
+                            screenEdgeX = -xOffset;
                         }
-                        else
+                        else if (screenCoords.X > xOffset) //right edge
                         {
-                            if (screenCoords.Y < 0)//bottom edge
-                            {
-                                var divider = screenCoords.Y / -edgeSymLen;
-                                screenEdgeY = -edgeSymLen;
-                                screenEdgeX = (float)(screenCoords.X / divider);
-                                rotation = 0;//Sort out what value this needs to be set to 
-                            }
-                            else//top edge
-                            {
-                                var divider = screenCoords.Y / edgeSymLen;
-                                screenEdgeY = edgeSymLen;
-                                screenEdgeX = (float)(screenCoords.X / divider);
-                                rotation = 0;//Sort out what value this needs to be set to 
-                            }
+                            screenEdgeX = xOffset;
                         }
-                        MyAPIGateway.Utilities.ShowNotification($"{signal.message}  {screenEdgeX}  {screenEdgeY}", 16);
-                        var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbol, new Vector2D(screenEdgeX, screenEdgeY), signalColor, Width: symbolWidth * 2, Height: symbolHeight * 2, TimeToLive: 2, Rotation: rotation);
+                        
+                        if (screenCoords.Y < -yOffset)//bottom edge
+                        {
+                            screenEdgeY = -yOffset;
+                        }
+                        else if (screenCoords.Y > yOffset)//top edge
+                        {
+                            screenEdgeY = yOffset;
+                        }
+                        MyAPIGateway.Utilities.ShowNotification($"{signal.message}  {screenEdgeX}  {screenEdgeY} {edgeSymLen}", 16);
+                        var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbol, new Vector2D(screenEdgeX, screenEdgeY), signalColor, Width: offScreenIconWidth, Height: offScreenIconHeight, TimeToLive: 2, Rotation: rotation);
 
                         //TODO: handle offscreen indicators
                     }
