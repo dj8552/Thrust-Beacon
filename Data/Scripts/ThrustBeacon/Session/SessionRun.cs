@@ -1,14 +1,12 @@
 ﻿using CoreSystems.Api;
 using Digi.Example_NetworkProtobuf;
 using Draygo.API;
-using Sandbox.Engine.Multiplayer;
 using Sandbox.Game.Entities;
-using Sandbox.Game.Entities.Cube;
 using Sandbox.ModAPI;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using VRage.Game;
+using VRage;
 using VRage.Game.Components;
 using VRage.Game.Entity;
 using VRage.Utils;
@@ -19,30 +17,13 @@ namespace ThrustBeacon
     [MySessionComponentDescriptor(MyUpdateOrder.BeforeSimulation)]
     public partial class Session : MySessionComponentBase
     {
-        internal static int Tick;
-        internal bool IsServer;
-        internal bool IsClient;
-        internal bool IsDedicated;
-        internal bool DedicatedServer;
-        internal bool MpActive;
-        internal bool MpServer;
-        internal bool IsHost;
-        HudAPIv2 hudAPI;
-        WcApi wcAPI;
-        public Networking Networking = new Networking(1337); //TODO: Pick a new number based on mod ID
-        internal MyStringId symbol = MyStringId.GetOrCompute("FrameSignal");
-        internal MyStringId symbolOffscreen = MyStringId.GetOrCompute("Arrow");
-
-        internal float symbolWidth = 0.02f;
-        internal float symbolHeight = 0f;//Leave this as zero, monitor aspect ratio is figured in later
+        //Future options stuff?
+        internal Color signalColor = Color.Red;
+        internal float symbolWidth = 0.04f;
         internal float offscreenWidth = 0.025f;
         internal float offscreenHeight = 0.05f;
-        internal float aspectRatio = 0f;
-        internal Vector2D offscreenSquish = new Vector2D(0.9, 0.7);
-        internal int viewDist = 0;
-        internal int cullDist = 2500;
-        internal Color signalColor = Color.Red;
-
+        internal int fadeOutTime = 90;
+        internal int maxContactAge = 500;
 
         public override void BeforeStart()
         {
@@ -50,30 +31,28 @@ namespace ThrustBeacon
         }
         public override void LoadData()
         {
-            IsServer = MyAPIGateway.Multiplayer.MultiplayerActive && MyAPIGateway.Session.IsServer;
-            DedicatedServer = MyAPIGateway.Utilities.IsDedicated;
-            MpActive = MyAPIGateway.Multiplayer.MultiplayerActive;
-            IsClient = !IsServer && !DedicatedServer;
-            IsHost = IsServer && !DedicatedServer && MpActive;
-            MpServer = IsHost || DedicatedServer || !MpActive;
-            if (!IsClient)
+            MPActive = MyAPIGateway.Multiplayer.MultiplayerActive;
+            Server = (MyAPIGateway.Multiplayer.MultiplayerActive && MyAPIGateway.Multiplayer.IsServer) || !MPActive; //TODO check if I jacked these up for actual application
+            Client = (MyAPIGateway.Multiplayer.MultiplayerActive && !MyAPIGateway.Multiplayer.IsServer) || !MPActive;
+            if (Server)
             {
                 MyEntities.OnEntityCreate += OnEntityCreate;
                 //TODO: Hook player joining for server and populate PlayerList, or just jam GetPlayers in Update?
-
             }
-            else
+            if (Client)
             {
                 hudAPI = new HudAPIv2();
                 wcAPI = new WcApi();
                 wcAPI.Load();
                 viewDist = Math.Min(Session.SessionSettings.SyncDistance, Session.SessionSettings.ViewDistance);
             }
+            if (!MPActive)
+                PlayerList.Add(MyAPIGateway.Session.Player);
 
         }
         public override void UpdateBeforeSimulation()
         {
-            if (symbolHeight == 0)
+            if (Client && symbolHeight == 0)//TODO see if there's a better spot for this
             {
                 aspectRatio = Session.Camera.ViewportSize.X / Session.Camera.ViewportSize.Y;
                 symbolHeight = symbolWidth * aspectRatio;
@@ -81,7 +60,7 @@ namespace ThrustBeacon
             }
 
             Tick++;
-            if (Tick % 60 == 0 && !IsClient)
+            if (Tick % 60 == 0 && Server)
             {
                 foreach (var gridComp in GridList)
                 {
@@ -90,191 +69,179 @@ namespace ThrustBeacon
                 }
 
                 //Find player controlled entities in range and broadcast to them
-                PlayerList.Clear();
-                MyAPIGateway.Multiplayer.Players.GetPlayers(PlayerList);//Kinda gross...
-                foreach (var player in PlayerList)
-                {
-                    if (player.Character == null || player.SteamUserId == 0) continue;
-                    var playerPos = player.Character.WorldAABB.Center;
-                    if (playerPos == Vector3D.Zero)
+                if(MPActive)
+                { 
+                    PlayerList.Clear();
+                    MyAPIGateway.Multiplayer.Players.GetPlayers(PlayerList);//Kinda gross...
+                    foreach (var player in PlayerList)
                     {
-                        MyLog.Default.WriteLineAndConsole($"Player position error - Vector3D.Zero - player.SteamUserId{player.SteamUserId}");
-                        continue;
+                        if (player.Character == null || (MPActive && player.SteamUserId == 0)) continue;
+                        var playerPos = player.Character.WorldAABB.Center;
+                        if (playerPos == Vector3D.Zero)
+                        {
+                            MyLog.Default.WriteLineAndConsole($"Player position error - Vector3D.Zero - player.SteamUserId{player.SteamUserId}");
+                            continue;
+                        }
+                        var tempList = new List<SignalComp>();
+                        foreach (var grid in GridList)
+                        {
+                            var gridPos = grid.Grid.PositionComp.WorldAABB.Center;
+                            var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
+                            if (distToTargSqr <= grid.broadcastDistSqr)
+                            {
+                                var signalData = new SignalComp();
+                                signalData.position = (Vector3I)gridPos;
+                                signalData.range = (int)Vector3D.Distance(playerPos, gridPos);
+                                signalData.faction = grid.faction;
+                                signalData.entityID = grid.Grid.EntityId;
+                                signalData.sizeEnum = grid.sizeEnum;
+                                tempList.Add(signalData);
+                            }
+                        }
+                        if (tempList.Count > 0)
+                            Networking.SendToPlayer(new PacketBase(tempList), player.SteamUserId);
                     }
+                }
+                else //Weird workaround for solo testing
+                {
                     var tempList = new List<SignalComp>();
                     foreach (var grid in GridList)
                     {
+                        var playerPos = Session.Player.Character.WorldAABB.Center;
+
                         var gridPos = grid.Grid.PositionComp.WorldAABB.Center;
                         var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
-                        if (distToTargSqr <= grid.broadcastDistSqr)
+                        if (distToTargSqr <= float.MaxValue)//grid.broadcastDistSqr)
                         {
                             var signalData = new SignalComp();
-                            signalData.position = gridPos;
-                            signalData.range = (int)Vector3D.Distance((Vector3D)playerPos, gridPos);
-                            signalData.message = grid.broadcastMsg;
+                            signalData.position = (Vector3I)gridPos;
+                            signalData.range = (int)Vector3D.Distance(playerPos, gridPos);
+                            signalData.faction = grid.faction;
                             signalData.entityID = grid.Grid.EntityId;
-                            tempList.Add(signalData);
+                            signalData.sizeEnum = grid.sizeEnum;
+
+                            if (SignalList.ContainsKey(signalData.entityID))
+                            {
+                                var updateTuple = new MyTuple<SignalComp, int>(signalData, Tick);
+                                SignalList[signalData.entityID] = updateTuple;
+                            }
+                            else
+                            {
+                                SignalList.TryAdd(signalData.entityID, new MyTuple<SignalComp, int>(signalData, Tick));
+                            }
                         }
                     }
-                    if (tempList.Count > 0)
-                        Networking.SendToPlayer(new PacketBase(tempList), player.SteamUserId);
                 }
                 if (!_startBlocks.IsEmpty || !_startGrids.IsEmpty)
-                StartComps();              
+                    StartComps();
             }
-            else if (Tick % 60 == 0 && IsClient)
+            if (Tick % 60 == 0 && Client)
             {
-                DrawList.Clear();
                 entityIDList.Clear();
-                
                 var controlledEnt = MyAPIGateway.Session?.Player?.Controller?.ControlledEntity?.Entity?.Parent;
-                
-                if (controlledEnt != null && controlledEnt is MyCubeGrid)
+                if (controlledEnt != null && controlledEnt is MyCubeGrid)//WC Deconflict
                 {
                     var myEnt = (MyEntity)controlledEnt;
                     wcAPI.GetSortedThreats(myEnt, threatList);
-                    foreach(var item in threatList)
+                    foreach (var item in threatList)
                     {
                         entityIDList.Add(item.Item1.EntityId);
                     }
                     wcAPI.GetObstructions(myEnt, obsList);
-                    foreach(var item in obsList)
+                    foreach (var item in obsList)
                     {
                         entityIDList.Add(item.EntityId);
                     }
                 }
-                
-                if (entityIDList.Count > 0)
+                foreach (var wcContact in entityIDList)
                 {
-                    foreach (var signal in SignalList)
-                    {
-                        if (entityIDList.Contains(signal.entityID))
-                            continue;
-                        DrawList.Add(signal);
-                    }
+                    if (SignalList.ContainsKey(wcContact))
+                        SignalList.Remove(wcContact);
                 }
-                else if (SignalList.Count > 0)
-                    DrawList = SignalList; //no WC contacts to deconflict
-                
-
                 //temp sample points
-                var temp1 = new SignalComp() { message = "Test1", range = 1234, position = new Vector3D(1000,2000,3000), entityID = 0 };
-                var temp2 = new SignalComp() { message = "Test2", range = 4567000, position = new Vector3D(11000, 2000, 3000), entityID = 0 };
-                var temp3 = new SignalComp() { message = "Test3", range = 4567000, position = new Vector3D(101000, 2000, 3000), entityID = 0 };
-                DrawList.Add(temp1);
-                DrawList.Add(temp2);
-                DrawList.Add(temp3);
+                if (Tick % 600 == 0 && !SignalList.ContainsKey(0) && !SignalList.ContainsKey(1))
+                {
+                    var temp1 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "Mover (won't fade for a real one)", range = 1234, position = new Vector3I(1000, 2000, 3000), entityID = 0, sizeEnum = 3 }, Tick);
+                    var temp2 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "Lost Signal", range = 4567000, position = new Vector3I(11000, 2000, 3000), entityID = 0, sizeEnum = 2 }, Tick);
+                    SignalList.TryAdd(0, temp1);
+                    SignalList.TryAdd(1, temp2);
+                }
+
+                if (SignalList.ContainsKey(2)) SignalList.Remove(2);
+                var temp3 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "Norm Update", range = 4567000, position = new Vector3I(101000, 2000, 3000), entityID = 0, sizeEnum = 4 }, Tick);
+                SignalList.TryAdd(2, temp3);
+                //temp moving point for positional update tests
+                if (SignalList.ContainsKey(0)) SignalList[0].Item1.position += new Vector3I(100, 0, 0);
                 //end of temp
-                SignalList.Clear();
             }
-            
-            if (Tick % 5 == 0 && !IsClient && shutdownList.Count > 0)
+
+
+            if (Tick % 5 == 0 && Server && shutdownList.Count > 0)//5 tick interval to keep players from spamming keys to turn power back on
             {
-                foreach (var gridComp in shutdownList) //TODO: Check for any risk of this being altered while iterating
+                foreach (var gridComp in shutdownList.ToArray())
                     gridComp.TogglePower();
             }
-        
+
         }
 
         public override void Draw()
         {
-            if (IsClient && hudAPI.Heartbeat && DrawList.Count > 0)
+            if (Client && hudAPI.Heartbeat && SignalList.Count > 0)
             {
                 var viewProjectionMat = Session.Camera.ViewMatrix * Session.Camera.ProjectionMatrix;
                 var camPos = Session.Camera.Position;
-                //TODO: Color fading may be interesting, timing brightness increase to a position update?
-                byte colorFade = (byte)(255 - (Tick % 180) * 0.75);
-                signalColor.R = colorFade;
-                signalColor.A = colorFade;
-
-                foreach (var signal in DrawList)
+                foreach (var signal in SignalList.ToArray())
                 {
-                    var adjustedPos = camPos + Vector3D.Normalize(signal.position - camPos) * viewDist;
+                    var contact = signal.Value.Item1;
+                    var contactAge = Tick - signal.Value.Item2;
+                    if (contactAge >= maxContactAge)
+                    {
+                        SignalList.Remove(signal.Key);
+                        continue;
+                    }
+
+                    if (fadeOutTime > 0) //TODO make fade out work logically with other colors.  Alpha channel appears to do jack
+                    {
+                        byte colorFade = (byte)(255 - (contactAge < fadeOutTime ? 0 : (contactAge - fadeOutTime) / 2));
+                        signalColor.R = colorFade;
+                    }
+
+                    var adjustedPos = camPos + Vector3D.Normalize((Vector3D)contact.position - camPos) * viewDist;
                     var screenCoords = Vector3D.Transform(adjustedPos, viewProjectionMat);
                     var offScreen = screenCoords.X > 1 || screenCoords.X < -1 || screenCoords.Y > 1 || screenCoords.Y < -1 || screenCoords.Z > 1;
                     if (!offScreen)
                     {
-                        
                         var symbolPosition = new Vector2D(screenCoords.X, screenCoords.Y);
                         var labelPosition = new Vector2D(screenCoords.X + (symbolHeight * 0.4), screenCoords.Y + (symbolHeight * 0.5));
-                        var dispRange = signal.range > 1000 ? signal.range / 1000 + " km" : signal.range + " m";
-                        var info = new StringBuilder(signal.message + "\n" + dispRange);
+                        var dispRange = contact.range > 1000 ? contact.range / 1000 + " km" : contact.range + " m";
+                        var info = new StringBuilder(contact.faction + messageList[contact.sizeEnum] + "\n" + dispRange);
                         var Label = new HudAPIv2.HUDMessage(info, labelPosition, new Vector2D(0, -0.001), 2, 1, true, true);
                         Label.InitialColor = signalColor;
                         Label.Visible = true;
-                        var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbol, symbolPosition, signalColor, Width: symbolWidth, Height: symbolHeight, TimeToLive: 2, HideHud: true);
+                        var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbolList[contact.sizeEnum], symbolPosition, signalColor, Width: symbolWidth, Height: symbolHeight, TimeToLive: 2, HideHud: true, Shadowing: true);
                     }
                     else
                     {
-                        if (true)//Circular clamped indicators
-                        {
-                            if (screenCoords.Z > 1)//Camera is between player and target
-                                screenCoords *= -1;
-                            var vectorToPt = new Vector2D(screenCoords.X, screenCoords.Y);
-                            vectorToPt.Normalize();
-                            vectorToPt *= offscreenSquish;
-                            var rotation = (float)Math.Atan2(screenCoords.X, screenCoords.Y);
-                            var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbolOffscreen, vectorToPt, signalColor, Width: offscreenWidth, Height: offscreenHeight, TimeToLive: 2, Rotation: rotation);
+                        if (screenCoords.Z > 1)//Camera is between player and target
+                            screenCoords *= -1;
+                        var vectorToPt = new Vector2D(screenCoords.X, screenCoords.Y);
+                        vectorToPt.Normalize();
+                        vectorToPt *= offscreenSquish;
+                        var vectorToPt2 = vectorToPt * 0.9;//TODO fix this offset (variable space on left vs top edge) or fix by replacing arrow with one that is large enough & offset already
 
-                        }
-                        else //Legacy edge of screen indicators
-                        {
-                            var offScreenIconWidth = symbolWidth * 2;
-                            var offScreenIconHeight = symbolHeight * 2;
-                            var xOffset = 1.0f - (offScreenIconWidth / 2);
-                            var yOffset = 1.0f - (offScreenIconHeight / 2);
-                            if (screenCoords.Z > 1)//Camera is between player and target
-                            {
-                                screenCoords.X = -screenCoords.X;
-                                screenCoords.Y = -screenCoords.Y;
-                            }
-                            var screenEdgeX = 0f;
-                            var screenEdgeY = 0f;
-                            var rotation = 0;
-                            if (Math.Abs(screenCoords.X) > Math.Abs(screenCoords.Y))
-                            {
-                                if (screenCoords.X < 0)//left edge
-                                {
-                                    var divider = screenCoords.X / -xOffset;
-                                    screenEdgeX = -xOffset;
-                                    screenEdgeY = (float)(screenCoords.Y / divider);
-                                    rotation = 0;//Sort out what value this needs to be set to 
-                                }
-                                else//right edge
-                                {
-                                    var divider = screenCoords.X / xOffset;
-                                    screenEdgeX = xOffset;
-                                    screenEdgeY = (float)(screenCoords.Y / divider);
-                                    rotation = 0;//Sort out what value this needs to be set to 
-                                }
-                            }
-                            else
-                            {
-                                if (screenCoords.Y < 0)//bottom edge
-                                {
-                                    var divider = screenCoords.Y / -yOffset;
-                                    screenEdgeY = -yOffset;
-                                    screenEdgeX = (float)(screenCoords.X / divider);
-                                    rotation = 0;//Sort out what value this needs to be set to 
-                                }
-                                else//top edge
-                                {
-                                    var divider = screenCoords.Y / yOffset;
-                                    screenEdgeY = yOffset;
-                                    screenEdgeX = (float)(screenCoords.X / divider);
-                                    rotation = 0;//Sort out what value this needs to be set to 
-                                }
-                            }
-                            var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbol, new Vector2D(screenEdgeX, screenEdgeY), signalColor, Width: offScreenIconWidth, Height: offScreenIconHeight, TimeToLive: 2, Rotation: rotation);
-                        }
+                        var rotation = (float)Math.Atan2(screenCoords.X, screenCoords.Y);
+                        var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbolOffscreen, vectorToPt, signalColor, Width: offscreenWidth, Height: offscreenHeight, TimeToLive: 2, Rotation: rotation, HideHud: true, Shadowing: true);
+                        var symbolObj2 = new HudAPIv2.BillBoardHUDMessage(symbolList[contact.sizeEnum], vectorToPt2, signalColor, Width: symbolWidth, Height: symbolHeight, TimeToLive: 2, HideHud: true, Shadowing: true);
+
                     }
                 }
                 //TODO: own signal display on screen?
             }
         }
+
         protected override void UnloadData()
         {
-            if (MpServer)
+            if (Server)
             {
                 MyEntities.OnEntityCreate -= OnEntityCreate;
                 Clean();
@@ -288,7 +255,6 @@ namespace ThrustBeacon
             PlayerList.Clear();
             GridList.Clear();
             SignalList.Clear();
-            DrawList.Clear();
             threatList.Clear();
             obsList.Clear();
             shutdownList.Clear();

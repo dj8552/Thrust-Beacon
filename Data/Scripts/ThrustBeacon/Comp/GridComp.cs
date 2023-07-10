@@ -14,8 +14,9 @@ namespace ThrustBeacon
         internal int broadcastDist;
         internal int broadcastDistOld;
         internal int broadcastDistSqr;
-        internal string broadcastMsg;
+        internal string faction = "";
         internal VRage.Game.MyCubeSize gridSize;
+        internal byte sizeEnum;
 
         internal void Init(MyCubeGrid grid, Session session)
         {
@@ -27,6 +28,15 @@ namespace ThrustBeacon
 
         internal void FatBlockAdded(MyCubeBlock block)
         {
+            if(block.CubeGrid.BigOwners != null && block.CubeGrid.BigOwners.Count > 0)
+            {
+                var curFaction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(block.CubeGrid.BigOwners[0]);
+                if (curFaction != null)
+                {
+                    faction = curFaction.Tag + ".";//TODO look at whether passing the faction tag over the net is more efficient as bytes
+                }
+            }
+
             var power = block as IMyPowerProducer;
             if (power != null)
                 powerList.Add(power);
@@ -36,52 +46,68 @@ namespace ThrustBeacon
             {
                 var name = thruster.BlockDefinition.SubtypeId.ToLower();
                 int divisor;
-                if (name == "arylnx_raider_epstein_drive")
-                    divisor = 733;
-
-                else if (name == "arylnx_quadra_epstein_drive")
-                    divisor = 625;
-
-                else if (name == "arylnx_munr_epstein_drive")
-                    divisor = 1385;
-
-                else if (name == "arylnx_epstein_drive")
-                    divisor = 1000;
-
-                else if (name == "arylnx_roci_epstein_drive")
-                    divisor = 1138;
-
-                else if (name == "arylynx_silversmith_epstein_drive")
-                    divisor = 1750;
-
-                else if (name == "arylnx_scircocco_epstein_drive")
-                    divisor = 1447;
-
-                else if (name == "arylnx_mega_epstein_drive")
-                    divisor = 1440;
-
-                else if (name == "arylnx_rzb_epstein_drive")
-                    divisor = 1250;
-
-                else if (name == "aryxlnx_yacht_epstein_drive")
-                    divisor = 1250;
-
-                else if (name == "arylnx_pndr_epstein_drive")
-                    divisor = 1052;
-
-                else if (name == "arylnx_drummer_epstein_drive")
-                    divisor = 1206;
-
-                else if (name == "arylnx_leo_epstein_drive")
-                    divisor = 1233;
-
-                else if (name.Contains("rcs"))
+                if(name.Contains("rcs"))
                     divisor = 5184;
-
                 else if (name.Contains("mesx"))
                     divisor = 5184;
+                else
+                    switch (name)
+                    {
+                        case "arylnx_raider_epstein_drive":
+                            divisor = 733;
+                            break;
+                        case "arylnx_quadra_epstein_drive":
+                            divisor = 625;
+                            break;
 
-                else divisor = 600;
+                        case "arylnx_munr_epstein_drive":
+                            divisor = 1385;
+                            break;
+
+                        case "arylnx_epstein_drive":
+                            divisor = 1000;
+                            break;
+
+                        case "arylnx_roci_epstein_drive":
+                            divisor = 1138;
+                            break;
+
+                        case "arylynx_silversmith_epstein_drive":
+                            divisor = 1750;
+                            break;
+
+                        case "arylnx_scircocco_epstein_drive":
+                            divisor = 1447;
+                            break;
+
+                        case "arylnx_mega_epstein_drive":
+                            divisor = 1440;
+                            break;
+
+                        case "arylnx_rzb_epstein_drive":
+                            divisor = 1250;
+                            break;
+
+                        case "aryxlnx_yacht_epstein_drive":
+                            divisor = 1250;
+                            break;
+
+                        case "arylnx_pndr_epstein_drive":
+                            divisor = 1052;
+                            break;
+
+                        case "arylnx_drummer_epstein_drive":
+                            divisor = 1206;
+                            break;
+
+                        case "arylnx_leo_epstein_drive":
+                            divisor = 1233;
+                            break;
+
+                        default:
+                            divisor = 600;
+                            break;
+                    }
                 thrustList.Add(thruster, divisor);
             }
         }
@@ -124,31 +150,27 @@ namespace ThrustBeacon
 
             if (broadcastDist < 100f)
             {
-                broadcastMsg = "Idle Drive Signature";
+                sizeEnum = 0;
             }
-            else if (broadcastDist >= 100f && broadcastDist < 8000f)
+            else if (broadcastDist < 8000f)
             {
-                broadcastMsg = "Small Drive Signature";
+                sizeEnum = 1;
             }
-            else if (broadcastDist >= 8001f && broadcastDist < 25000f)
+            else if (broadcastDist < 25000f)
             {
-                broadcastMsg = "Medium Drive Signature";
+                sizeEnum = 2;
             }
-            else if (broadcastDist >= 25001f && broadcastDist < 100000f)
+            else if (broadcastDist < 100000f)
             {
-                broadcastMsg = "Large Drive Signature";
+                sizeEnum = 3;
             }
-            else if (broadcastDist >= 100001f && broadcastDist < 250000f)
+            else if (broadcastDist < 250000f)
             {
-                broadcastMsg = "Huge Drive Signature";
+                sizeEnum = 4;
             }
-            else if (broadcastDist >= 250001f && broadcastDist < 500000f)
+            else
             {
-                broadcastMsg = "Massive Drive Signature";
-            }
-            else if (broadcastDist >= 500001f)
-            {
-                broadcastMsg = "Immense Drive Signature";
+                sizeEnum = 5;
             }
 
             if (broadcastDist >= 500000 && !powerShutdown)
@@ -161,8 +183,8 @@ namespace ThrustBeacon
 
         internal void TogglePower()
         {
-            foreach (var power in powerList)
-                if (!power.MarkedForClose && power.Enabled)
+            foreach (var power in powerList.ToArray())
+                if (power.Enabled && !power.MarkedForClose)
                     power.Enabled = false;
         }
 

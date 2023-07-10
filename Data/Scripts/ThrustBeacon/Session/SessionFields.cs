@@ -1,4 +1,7 @@
-﻿using Sandbox.Game.Entities;
+﻿using CoreSystems.Api;
+using Digi.Example_NetworkProtobuf;
+using Draygo.API;
+using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
 using System;
 using System.Collections.Concurrent;
@@ -9,26 +12,43 @@ using VRage.Game.Components;
 using VRage.Game.Entity;
 using VRage.Game.ModAPI;
 using VRage.ModAPI;
+using VRage.Utils;
+using VRageMath;
 
 namespace ThrustBeacon
 {
     public partial class Session : MySessionComponentBase
     {
+        internal static int Tick;
+
+        internal bool Client;
+        internal bool Server;
+        internal bool MPActive;
+        static HudAPIv2 hudAPI;
+        WcApi wcAPI;
+        public Networking Networking = new Networking(1337); //TODO: Pick a new number based on mod ID
+        internal MyStringId symbol = MyStringId.GetOrCompute("FrameSignal");
+        internal MyStringId symbolOffscreen = MyStringId.GetOrCompute("Arrow");
+        internal List<MyStringId> symbolList = new List<MyStringId>(){MyStringId.GetOrCompute("IdleSignal"), MyStringId.GetOrCompute("SmallSignal"), MyStringId.GetOrCompute("MediumSignal"),
+        MyStringId.GetOrCompute("LargeSignal"), MyStringId.GetOrCompute("HugeSignal"), MyStringId.GetOrCompute("MassiveSignal")};
+        internal List<string> messageList = new List<string>() {"Idle Sig", "Small Sig", "Medium Sig", "Large Sig", "Huge Sig", "Massive Sig"};
+
+
+        internal float symbolHeight = 0f;//Leave this as zero, monitor aspect ratio is figured in later
+        internal float aspectRatio = 0f;
+        internal Vector2D offscreenSquish = new Vector2D(0.9, 0.7);
+        internal int viewDist = 0;
         private readonly Stack<GridComp> _gridCompPool = new Stack<GridComp>(128);
         private readonly ConcurrentCachingList<MyCubeBlock> _startBlocks = new ConcurrentCachingList<MyCubeBlock>();
         private readonly ConcurrentCachingList<MyCubeGrid> _startGrids = new ConcurrentCachingList<MyCubeGrid>();
         internal readonly List<GridComp> GridList = new List<GridComp>();
         internal readonly ConcurrentDictionary<IMyCubeGrid, GridComp> GridMap = new ConcurrentDictionary<IMyCubeGrid, GridComp>();
         internal List<IMyPlayer> PlayerList = new List<IMyPlayer>();
-        internal static List<SignalComp> SignalList = new List<SignalComp>();
-        internal List<SignalComp> DrawList = new List<SignalComp>();
+        internal static ConcurrentDictionary<long, MyTuple<SignalComp, int>> SignalList = new ConcurrentDictionary<long, MyTuple<SignalComp, int>>();
         internal ICollection<MyTuple<MyEntity, float>> threatList = new List<MyTuple<MyEntity, float>>();
         internal ICollection<MyEntity> obsList = new List<MyEntity>();
         internal List<long> entityIDList = new List<long>();
         internal static List<GridComp> shutdownList = new List<GridComp>();
-
-
-
 
         internal void StartComps()
         {

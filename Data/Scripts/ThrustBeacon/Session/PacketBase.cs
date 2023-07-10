@@ -1,6 +1,8 @@
 ﻿using ProtoBuf;
 using System.Collections.Generic;
 using ThrustBeacon;
+using VRage;
+using VRageMath;
 
 namespace Digi.Example_NetworkProtobuf
 {
@@ -29,8 +31,15 @@ namespace Digi.Example_NetworkProtobuf
             //TODO:  Handler for multiple servers sending in lists
             foreach (var signalRcvd in signalData)
             {
-                if (!Session.SignalList.Contains(signalRcvd))
-                    Session.SignalList.Add(signalRcvd);
+                if(Session.SignalList.ContainsKey(signalRcvd.entityID))//TODO:  Any error checking on received data?
+                {
+                    var updateTuple = new MyTuple<SignalComp, int>(signalRcvd, Session.Tick);
+                    Session.SignalList[signalRcvd.entityID] = updateTuple;
+                }
+                else
+                {
+                    Session.SignalList.TryAdd(signalRcvd.entityID, new MyTuple<SignalComp, int>(signalRcvd, Session.Tick));
+                }
             }
             return false;           
         }
