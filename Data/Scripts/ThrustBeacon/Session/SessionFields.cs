@@ -28,6 +28,8 @@ namespace ThrustBeacon
         WcApi wcAPI;
         public Networking Networking = new Networking(1337); //TODO: Pick a new number based on mod ID
         internal MyStringId symbol = MyStringId.GetOrCompute("FrameSignal");
+        internal MyStringId symbolOffscreenArrow = MyStringId.GetOrCompute("ArrowOffset");
+
         internal MyStringId symbolOffscreen = MyStringId.GetOrCompute("Arrow");
         internal List<MyStringId> symbolList = new List<MyStringId>(){MyStringId.GetOrCompute("IdleSignal"), MyStringId.GetOrCompute("SmallSignal"), MyStringId.GetOrCompute("MediumSignal"),
         MyStringId.GetOrCompute("LargeSignal"), MyStringId.GetOrCompute("HugeSignal"), MyStringId.GetOrCompute("MassiveSignal")};
@@ -38,6 +40,8 @@ namespace ThrustBeacon
         internal float aspectRatio = 0f;
         internal Vector2D offscreenSquish = new Vector2D(0.9, 0.7);
         internal int viewDist = 0;
+        internal float offscreenHeight = 0f;
+
         private readonly Stack<GridComp> _gridCompPool = new Stack<GridComp>(128);
         private readonly ConcurrentCachingList<MyCubeBlock> _startBlocks = new ConcurrentCachingList<MyCubeBlock>();
         private readonly ConcurrentCachingList<MyCubeGrid> _startGrids = new ConcurrentCachingList<MyCubeGrid>();

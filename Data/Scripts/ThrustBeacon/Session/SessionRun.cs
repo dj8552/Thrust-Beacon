@@ -18,12 +18,13 @@ namespace ThrustBeacon
     public partial class Session : MySessionComponentBase
     {
         //Future options stuff?
-        internal Color signalColor = Color.Red;
+        internal Color signalColor = Color.Yellow;
         internal float symbolWidth = 0.04f;
-        internal float offscreenWidth = 0.025f;
-        internal float offscreenHeight = 0.05f;
+        internal float offscreenWidth = 0.1f;
         internal int fadeOutTime = 90;
         internal int maxContactAge = 500;
+        internal float textSize = 1f;
+        internal Vector2D signalDrawCoords = new Vector2D(-0.7, -0.625);
 
         public override void BeforeStart()
         {
@@ -56,86 +57,69 @@ namespace ThrustBeacon
             {
                 aspectRatio = Session.Camera.ViewportSize.X / Session.Camera.ViewportSize.Y;
                 symbolHeight = symbolWidth * aspectRatio;
-                offscreenHeight *= aspectRatio;
+                offscreenHeight = offscreenWidth * aspectRatio;
             }
 
             Tick++;
-            if (Tick % 60 == 0 && Server)
+            if (Server && Tick % 60 == 0)
             {
                 foreach (var gridComp in GridList)
                 {
                     if (gridComp.thrustList.Count > 0)
                         gridComp.CalcThrust();//TODO: See if there's a better way to account for pulsing/blipping the gas
                 }
-
                 //Find player controlled entities in range and broadcast to them
-                if(MPActive)
-                { 
-                    PlayerList.Clear();
-                    MyAPIGateway.Multiplayer.Players.GetPlayers(PlayerList);//Kinda gross...
-                    foreach (var player in PlayerList)
-                    {
-                        if (player.Character == null || (MPActive && player.SteamUserId == 0)) continue;
-                        var playerPos = player.Character.WorldAABB.Center;
-                        if (playerPos == Vector3D.Zero)
-                        {
-                            MyLog.Default.WriteLineAndConsole($"Player position error - Vector3D.Zero - player.SteamUserId{player.SteamUserId}");
-                            continue;
-                        }
-                        var tempList = new List<SignalComp>();
-                        foreach (var grid in GridList)
-                        {
-                            var gridPos = grid.Grid.PositionComp.WorldAABB.Center;
-                            var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
-                            if (distToTargSqr <= grid.broadcastDistSqr)
-                            {
-                                var signalData = new SignalComp();
-                                signalData.position = (Vector3I)gridPos;
-                                signalData.range = (int)Vector3D.Distance(playerPos, gridPos);
-                                signalData.faction = grid.faction;
-                                signalData.entityID = grid.Grid.EntityId;
-                                signalData.sizeEnum = grid.sizeEnum;
-                                tempList.Add(signalData);
-                            }
-                        }
-                        if (tempList.Count > 0)
-                            Networking.SendToPlayer(new PacketBase(tempList), player.SteamUserId);
-                    }
-                }
-                else //Weird workaround for solo testing
+                PlayerList.Clear();
+                MyAPIGateway.Multiplayer.Players.GetPlayers(PlayerList);//Kinda gross...
+                if (!MPActive) PlayerList.Add(Session.Player);
+                foreach (var player in PlayerList)
                 {
-                    var tempList = new List<SignalComp>();
+                    if (player.Character == null || (MPActive && player.SteamUserId == 0)) continue;
+                    var playerPos = player.Character.WorldAABB.Center;
+                    if (playerPos == Vector3D.Zero)
+                    {
+                        MyLog.Default.WriteLineAndConsole($"Player position error - Vector3D.Zero - player.SteamUserId{player.SteamUserId}");
+                        continue;
+                    }
+                var controlledEnt = player.Controller?.ControlledEntity?.Entity?.Parent?.EntityId;
+
+                var tempList = new List<SignalComp>();
                     foreach (var grid in GridList)
                     {
-                        var playerPos = Session.Player.Character.WorldAABB.Center;
-
+                        var playerGrid = grid.Grid.EntityId == controlledEnt;
                         var gridPos = grid.Grid.PositionComp.WorldAABB.Center;
                         var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
-                        if (distToTargSqr <= float.MaxValue)//grid.broadcastDistSqr)
+                        if (playerGrid || distToTargSqr <= grid.broadcastDistSqr)
                         {
                             var signalData = new SignalComp();
                             signalData.position = (Vector3I)gridPos;
-                            signalData.range = (int)Vector3D.Distance(playerPos, gridPos);
+                            signalData.range = playerGrid ? grid.broadcastDist : (int)Math.Sqrt(distToTargSqr);
                             signalData.faction = grid.faction;
                             signalData.entityID = grid.Grid.EntityId;
                             signalData.sizeEnum = grid.sizeEnum;
+                            tempList.Add(signalData);
 
-                            if (SignalList.ContainsKey(signalData.entityID))
+                            if(!MPActive)
                             {
-                                var updateTuple = new MyTuple<SignalComp, int>(signalData, Tick);
-                                SignalList[signalData.entityID] = updateTuple;
-                            }
-                            else
-                            {
-                                SignalList.TryAdd(signalData.entityID, new MyTuple<SignalComp, int>(signalData, Tick));
+                                if (SignalList.ContainsKey(signalData.entityID))
+                                {
+                                    var updateTuple = new MyTuple<SignalComp, int>(signalData, Tick);
+                                    SignalList[signalData.entityID] = updateTuple;
+                                }
+                                else
+                                    SignalList.TryAdd(signalData.entityID, new MyTuple<SignalComp, int>(signalData, Tick));
                             }
                         }
                     }
+                    if (MPActive && tempList.Count > 0)
+                        Networking.SendToPlayer(new PacketBase(tempList), player.SteamUserId);
                 }
                 if (!_startBlocks.IsEmpty || !_startGrids.IsEmpty)
                     StartComps();
             }
-            if (Tick % 60 == 0 && Client)
+
+            //Clientside list processing
+            if (Client && Tick % 60 == 0)
             {
                 entityIDList.Clear();
                 var controlledEnt = MyAPIGateway.Session?.Player?.Controller?.ControlledEntity?.Entity?.Parent;
@@ -176,7 +160,7 @@ namespace ThrustBeacon
             }
 
 
-            if (Tick % 5 == 0 && Server && shutdownList.Count > 0)//5 tick interval to keep players from spamming keys to turn power back on
+            if (Server && Tick % 5 == 0 && shutdownList.Count > 0)//5 tick interval to keep players from spamming keys to turn power back on
             {
                 foreach (var gridComp in shutdownList.ToArray())
                     gridComp.TogglePower();
@@ -190,52 +174,65 @@ namespace ThrustBeacon
             {
                 var viewProjectionMat = Session.Camera.ViewMatrix * Session.Camera.ProjectionMatrix;
                 var camPos = Session.Camera.Position;
+                var playerEnt = MyAPIGateway.Session?.Player?.Controller?.ControlledEntity?.Entity?.Parent?.EntityId;
+
                 foreach (var signal in SignalList.ToArray())
                 {
                     var contact = signal.Value.Item1;
-                    var contactAge = Tick - signal.Value.Item2;
-                    if (contactAge >= maxContactAge)
+                    if (contact.entityID == playerEnt)
                     {
-                        SignalList.Remove(signal.Key);
-                        continue;
-                    }
-
-                    if (fadeOutTime > 0) //TODO make fade out work logically with other colors.  Alpha channel appears to do jack
-                    {
-                        byte colorFade = (byte)(255 - (contactAge < fadeOutTime ? 0 : (contactAge - fadeOutTime) / 2));
-                        signalColor.R = colorFade;
-                    }
-
-                    var adjustedPos = camPos + Vector3D.Normalize((Vector3D)contact.position - camPos) * viewDist;
-                    var screenCoords = Vector3D.Transform(adjustedPos, viewProjectionMat);
-                    var offScreen = screenCoords.X > 1 || screenCoords.X < -1 || screenCoords.Y > 1 || screenCoords.Y < -1 || screenCoords.Z > 1;
-                    if (!offScreen)
-                    {
-                        var symbolPosition = new Vector2D(screenCoords.X, screenCoords.Y);
-                        var labelPosition = new Vector2D(screenCoords.X + (symbolHeight * 0.4), screenCoords.Y + (symbolHeight * 0.5));
-                        var dispRange = contact.range > 1000 ? contact.range / 1000 + " km" : contact.range + " m";
-                        var info = new StringBuilder(contact.faction + messageList[contact.sizeEnum] + "\n" + dispRange);
-                        var Label = new HudAPIv2.HUDMessage(info, labelPosition, new Vector2D(0, -0.001), 2, 1, true, true);
-                        Label.InitialColor = signalColor;
+                        var dispRange = contact.range > 1000 ? (contact.range / 1000f).ToString("0.0") + " km" : contact.range + " m";
+                        var info = new StringBuilder("Broadcast Dist: " + dispRange + "\n" + "Size: " + messageList[contact.sizeEnum]);
+                        var Label = new HudAPIv2.HUDMessage(info, signalDrawCoords, null, 2, textSize, true, true);
+                        //Label.InitialColor = signalColor;
                         Label.Visible = true;
-                        var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbolList[contact.sizeEnum], symbolPosition, signalColor, Width: symbolWidth, Height: symbolHeight, TimeToLive: 2, HideHud: true, Shadowing: true);
                     }
                     else
                     {
-                        if (screenCoords.Z > 1)//Camera is between player and target
-                            screenCoords *= -1;
-                        var vectorToPt = new Vector2D(screenCoords.X, screenCoords.Y);
-                        vectorToPt.Normalize();
-                        vectorToPt *= offscreenSquish;
-                        var vectorToPt2 = vectorToPt * 0.9;//TODO fix this offset (variable space on left vs top edge) or fix by replacing arrow with one that is large enough & offset already
+                        var contactAge = Tick - signal.Value.Item2;
+                        if (contactAge >= maxContactAge)
+                        {
+                            SignalList.Remove(signal.Key);
+                            continue;
+                        }
+                        var adjColor = signalColor;
+                        if (fadeOutTime > 0)
+                        {
+                            byte colorFade = (byte)(contactAge < fadeOutTime ? 0 : (contactAge - fadeOutTime) / 2);
+                            adjColor.R = (byte)MathHelper.Clamp(signalColor.R - colorFade, 0, 255);
+                            adjColor.G = (byte)MathHelper.Clamp(signalColor.G - colorFade, 0, 255);
+                            adjColor.B = (byte)MathHelper.Clamp(signalColor.B - colorFade, 0, 255);
+                        }
 
-                        var rotation = (float)Math.Atan2(screenCoords.X, screenCoords.Y);
-                        var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbolOffscreen, vectorToPt, signalColor, Width: offscreenWidth, Height: offscreenHeight, TimeToLive: 2, Rotation: rotation, HideHud: true, Shadowing: true);
-                        var symbolObj2 = new HudAPIv2.BillBoardHUDMessage(symbolList[contact.sizeEnum], vectorToPt2, signalColor, Width: symbolWidth, Height: symbolHeight, TimeToLive: 2, HideHud: true, Shadowing: true);
+                        var adjustedPos = camPos + Vector3D.Normalize((Vector3D)contact.position - camPos) * viewDist;
+                        var screenCoords = Vector3D.Transform(adjustedPos, viewProjectionMat);
+                        var offScreen = screenCoords.X > 1 || screenCoords.X < -1 || screenCoords.Y > 1 || screenCoords.Y < -1 || screenCoords.Z > 1;
+                        if (!offScreen)
+                        {
+                            var symbolPosition = new Vector2D(screenCoords.X, screenCoords.Y);
+                            var labelPosition = new Vector2D(screenCoords.X + (symbolHeight * 0.4), screenCoords.Y + (symbolHeight * 0.5));
+                            var dispRange = contact.range > 1000 ? contact.range / 1000 + " km" : contact.range + " m";
+                            var info = new StringBuilder(contact.faction + messageList[contact.sizeEnum] + "\n" + dispRange);
+                            var Label = new HudAPIv2.HUDMessage(info, labelPosition, new Vector2D(0, -0.001), 2, textSize, true, true);
+                            Label.InitialColor = adjColor;
+                            Label.Visible = true;
+                            var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbolList[contact.sizeEnum], symbolPosition, adjColor, Width: symbolWidth, Height: symbolHeight, TimeToLive: 2, HideHud: true, Shadowing: true);
+                        }
+                        else
+                        {
+                            if (screenCoords.Z > 1)//Camera is between player and target
+                                screenCoords *= -1;
+                            var vectorToPt = new Vector2D(screenCoords.X, screenCoords.Y);
+                            vectorToPt.Normalize();
+                            vectorToPt *= offscreenSquish;
+                            var vectorToPt2 = vectorToPt * 0.9;//TODO fix this offset (variable space on left vs top edge) or fix by replacing arrow with one that is large enough & offset already
 
+                            var rotation = (float)Math.Atan2(screenCoords.X, screenCoords.Y);
+                            var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbolOffscreenArrow, vectorToPt, adjColor, Width: offscreenWidth, Height: offscreenHeight, TimeToLive: 2, Rotation: rotation, HideHud: true, Shadowing: true);
+                            var symbolObj2 = new HudAPIv2.BillBoardHUDMessage(symbolList[contact.sizeEnum], vectorToPt, adjColor, Width: symbolWidth, Height: symbolHeight, TimeToLive: 2, HideHud: true, Shadowing: true);
+                        }
                     }
                 }
-                //TODO: own signal display on screen?
             }
         }
 

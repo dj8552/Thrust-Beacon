@@ -56,6 +56,7 @@ namespace ThrustBeacon
                         case "arylnx_raider_epstein_drive":
                             divisor = 733;
                             break;
+
                         case "arylnx_quadra_epstein_drive":
                             divisor = 625;
                             break;
@@ -148,27 +149,27 @@ namespace ThrustBeacon
                     broadcastDist = 1;
             }
 
-            if (broadcastDist < 100f)
+            if (broadcastDist < 100f)//Idle
             {
                 sizeEnum = 0;
             }
-            else if (broadcastDist < 8000f)
+            else if (broadcastDist < 8000f)//Small
             {
                 sizeEnum = 1;
             }
-            else if (broadcastDist < 25000f)
+            else if (broadcastDist < 25000f)//Medium
             {
                 sizeEnum = 2;
             }
-            else if (broadcastDist < 100000f)
+            else if (broadcastDist < 100000f)//Large
             {
                 sizeEnum = 3;
             }
-            else if (broadcastDist < 250000f)
+            else if (broadcastDist < 250000f)//Huge
             {
                 sizeEnum = 4;
             }
-            else
+            else//Massive
             {
                 sizeEnum = 5;
             }
