@@ -13,7 +13,7 @@ namespace ThrustBeacon
         internal bool powerShutdown = false;
         internal int broadcastDist;
         internal int broadcastDistOld;
-        internal int broadcastDistSqr;
+        internal long broadcastDistSqr;
         internal string faction = "";
         internal VRage.Game.MyCubeSize gridSize;
         internal byte sizeEnum;
@@ -178,7 +178,7 @@ namespace ThrustBeacon
                 Session.shutdownList.Add(this);
             else if (broadcastDist < 500000 && powerShutdown)
                 Session.shutdownList.Remove(this);
-            broadcastDistSqr = broadcastDist * broadcastDist;
+            broadcastDistSqr = (long)broadcastDist * broadcastDist;
             return;
         }
 

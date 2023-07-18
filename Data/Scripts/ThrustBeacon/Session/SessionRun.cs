@@ -44,7 +44,6 @@ namespace ThrustBeacon
         }
         public override void UpdateBeforeSimulation()
         {
-            MyAPIGateway.Utilities.ShowNotification($"Client: {Client}  Server: {Server}  MPActive: {MPActive}",16);
             if (Client && symbolHeight == 0)//TODO see if there's a better spot for this that only runs once
             {
                 aspectRatio = Session.Camera.ViewportSize.X / Session.Camera.ViewportSize.Y;
