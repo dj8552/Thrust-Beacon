@@ -126,6 +126,13 @@ namespace ThrustBeacon
 
         internal void CalcThrust()
         {
+            if (thrustList.Count == 0 && !powerShutdown)
+            {
+                broadcastDist = 0;
+                sizeEnum = 0;
+                return;
+            }
+
             broadcastDistOld = broadcastDist;
 
             if (!Grid.IsStatic)

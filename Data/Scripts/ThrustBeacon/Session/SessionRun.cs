@@ -44,7 +44,7 @@ namespace ThrustBeacon
         }
         public override void UpdateBeforeSimulation()
         {
-            if (Client && symbolHeight == 0)//TODO see if there's a better spot for this that only runs once
+            if (Client && symbolHeight == 0)//TODO see if there's a better spot for this that only runs once... seems like Camera isn't available in LoadData
             {
                 aspectRatio = Session.Camera.ViewportSize.X / Session.Camera.ViewportSize.Y;
                 symbolHeight = Settings.Instance.symbolWidth * aspectRatio;
@@ -69,13 +69,14 @@ namespace ThrustBeacon
                     var playerPos = player.Character.WorldAABB.Center;
                     if (playerPos == Vector3D.Zero)
                     {
-                        MyLog.Default.WriteLineAndConsole($"Player position error - Vector3D.Zero - player.SteamUserId{player.SteamUserId}");
+                        MyLog.Default.WriteLineAndConsole($"Player position error - Vector3D.Zero - player.Name: {player.DisplayName} - player.SteamUserId: {player.SteamUserId}");
                         continue;
                     }
                     var controlledEnt = player.Controller?.ControlledEntity?.Entity?.Parent?.EntityId;
                     var tempList = new List<SignalComp>();
                     foreach (var grid in GridList)
                     {
+                        if (grid.broadcastDist == 0) continue;
                         var playerGrid = grid.Grid.EntityId == controlledEnt;
                         var gridPos = grid.Grid.PositionComp.WorldAABB.Center;
                         var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
