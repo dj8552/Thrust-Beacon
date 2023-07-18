@@ -33,10 +33,10 @@ namespace ThrustBeacon
             }
             if (Client)
             {
+                InitConfig();
                 hudAPI = new HudAPIv2(InitMenu);
                 wcAPI = new WcApi();
                 wcAPI.Load();
-                InitConfig();
                 viewDist = Math.Min(Session.SessionSettings.SyncDistance, Session.SessionSettings.ViewDistance);
             }
             if (!MPActive)
@@ -44,6 +44,7 @@ namespace ThrustBeacon
         }
         public override void UpdateBeforeSimulation()
         {
+            MyAPIGateway.Utilities.ShowNotification($"Client: {Client}  Server: {Server}  MPActive: {MPActive}",16);
             if (Client && symbolHeight == 0)//TODO see if there's a better spot for this that only runs once
             {
                 aspectRatio = Session.Camera.ViewportSize.X / Session.Camera.ViewportSize.Y;
@@ -72,9 +73,8 @@ namespace ThrustBeacon
                         MyLog.Default.WriteLineAndConsole($"Player position error - Vector3D.Zero - player.SteamUserId{player.SteamUserId}");
                         continue;
                     }
-                var controlledEnt = player.Controller?.ControlledEntity?.Entity?.Parent?.EntityId;
-
-                var tempList = new List<SignalComp>();
+                    var controlledEnt = player.Controller?.ControlledEntity?.Entity?.Parent?.EntityId;
+                    var tempList = new List<SignalComp>();
                     foreach (var grid in GridList)
                     {
                         var playerGrid = grid.Grid.EntityId == controlledEnt;
@@ -105,7 +105,7 @@ namespace ThrustBeacon
                     if (MPActive && tempList.Count > 0)
                         Networking.SendToPlayer(new PacketBase(tempList), player.SteamUserId);
                 }
-                if (!_startBlocks.IsEmpty || !_startGrids.IsEmpty)
+                if ((!_startBlocks.IsEmpty || !_startGrids.IsEmpty))
                     StartComps();
             }
 
