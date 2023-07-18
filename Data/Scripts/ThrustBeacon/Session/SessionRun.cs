@@ -17,15 +17,6 @@ namespace ThrustBeacon
     [MySessionComponentDescriptor(MyUpdateOrder.BeforeSimulation)]
     public partial class Session : MySessionComponentBase
     {
-        //Future options stuff?
-        internal Color signalColor = Color.Yellow;
-        internal float symbolWidth = 0.04f;
-        internal float offscreenWidth = 0.1f;
-        internal int fadeOutTime = 90;
-        internal int maxContactAge = 500;
-        internal float textSize = 1f;
-        internal Vector2D signalDrawCoords = new Vector2D(-0.7, -0.625);
-
         public override void BeforeStart()
         {
             Networking.Register();
@@ -42,22 +33,22 @@ namespace ThrustBeacon
             }
             if (Client)
             {
-                hudAPI = new HudAPIv2();
+                hudAPI = new HudAPIv2(InitMenu);
                 wcAPI = new WcApi();
                 wcAPI.Load();
+                InitConfig();
                 viewDist = Math.Min(Session.SessionSettings.SyncDistance, Session.SessionSettings.ViewDistance);
             }
             if (!MPActive)
                 PlayerList.Add(MyAPIGateway.Session.Player);
-
         }
         public override void UpdateBeforeSimulation()
         {
-            if (Client && symbolHeight == 0)//TODO see if there's a better spot for this
+            if (Client && symbolHeight == 0)//TODO see if there's a better spot for this that only runs once
             {
                 aspectRatio = Session.Camera.ViewportSize.X / Session.Camera.ViewportSize.Y;
-                symbolHeight = symbolWidth * aspectRatio;
-                offscreenHeight = offscreenWidth * aspectRatio;
+                symbolHeight = Settings.Instance.symbolWidth * aspectRatio;
+                offscreenHeight = Settings.Instance.offscreenWidth * aspectRatio;
             }
 
             Tick++;
@@ -172,6 +163,7 @@ namespace ThrustBeacon
         {
             if (Client && hudAPI.Heartbeat && SignalList.Count > 0)
             {
+                var s = Settings.Instance;
                 var viewProjectionMat = Session.Camera.ViewMatrix * Session.Camera.ProjectionMatrix;
                 var camPos = Session.Camera.Position;
                 var playerEnt = MyAPIGateway.Session?.Player?.Controller?.ControlledEntity?.Entity?.Parent?.EntityId;
@@ -183,25 +175,24 @@ namespace ThrustBeacon
                     {
                         var dispRange = contact.range > 1000 ? (contact.range / 1000f).ToString("0.0") + " km" : contact.range + " m";
                         var info = new StringBuilder("Broadcast Dist: " + dispRange + "\n" + "Size: " + messageList[contact.sizeEnum]);
-                        var Label = new HudAPIv2.HUDMessage(info, signalDrawCoords, null, 2, textSize, true, true);
-                        //Label.InitialColor = signalColor;
+                        var Label = new HudAPIv2.HUDMessage(info, s.signalDrawCoords, null, 2, s.textSizeOwn, true, true);
                         Label.Visible = true;
                     }
                     else
                     {
                         var contactAge = Tick - signal.Value.Item2;
-                        if (contactAge >= maxContactAge)
+                        if (contactAge >= s.maxContactAge)
                         {
                             SignalList.Remove(signal.Key);
                             continue;
                         }
-                        var adjColor = signalColor;
-                        if (fadeOutTime > 0)
+                        var adjColor = s.signalColor;
+                        if (s.fadeOutTime > 0)
                         {
-                            byte colorFade = (byte)(contactAge < fadeOutTime ? 0 : (contactAge - fadeOutTime) / 2);
-                            adjColor.R = (byte)MathHelper.Clamp(signalColor.R - colorFade, 0, 255);
-                            adjColor.G = (byte)MathHelper.Clamp(signalColor.G - colorFade, 0, 255);
-                            adjColor.B = (byte)MathHelper.Clamp(signalColor.B - colorFade, 0, 255);
+                            byte colorFade = (byte)(contactAge < s.fadeOutTime ? 0 : (contactAge - s.fadeOutTime) / 2);
+                            adjColor.R = (byte)MathHelper.Clamp(s.signalColor.R - colorFade, 0, 255);
+                            adjColor.G = (byte)MathHelper.Clamp(s.signalColor.G - colorFade, 0, 255);
+                            adjColor.B = (byte)MathHelper.Clamp(s.signalColor.B - colorFade, 0, 255);
                         }
 
                         var adjustedPos = camPos + Vector3D.Normalize((Vector3D)contact.position - camPos) * viewDist;
@@ -213,10 +204,10 @@ namespace ThrustBeacon
                             var labelPosition = new Vector2D(screenCoords.X + (symbolHeight * 0.4), screenCoords.Y + (symbolHeight * 0.5));
                             var dispRange = contact.range > 1000 ? contact.range / 1000 + " km" : contact.range + " m";
                             var info = new StringBuilder(contact.faction + messageList[contact.sizeEnum] + "\n" + dispRange);
-                            var Label = new HudAPIv2.HUDMessage(info, labelPosition, new Vector2D(0, -0.001), 2, textSize, true, true);
+                            var Label = new HudAPIv2.HUDMessage(info, labelPosition, new Vector2D(0, -0.001), 2, s.textSize, true, true);
                             Label.InitialColor = adjColor;
                             Label.Visible = true;
-                            var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbolList[contact.sizeEnum], symbolPosition, adjColor, Width: symbolWidth, Height: symbolHeight, TimeToLive: 2, HideHud: true, Shadowing: true);
+                            var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbolList[contact.sizeEnum], symbolPosition, adjColor, Width: s.symbolWidth, Height: symbolHeight, TimeToLive: 2, HideHud: true, Shadowing: true);
                         }
                         else
                         {
@@ -225,11 +216,10 @@ namespace ThrustBeacon
                             var vectorToPt = new Vector2D(screenCoords.X, screenCoords.Y);
                             vectorToPt.Normalize();
                             vectorToPt *= offscreenSquish;
-                            var vectorToPt2 = vectorToPt * 0.9;//TODO fix this offset (variable space on left vs top edge) or fix by replacing arrow with one that is large enough & offset already
 
                             var rotation = (float)Math.Atan2(screenCoords.X, screenCoords.Y);
-                            var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbolOffscreenArrow, vectorToPt, adjColor, Width: offscreenWidth, Height: offscreenHeight, TimeToLive: 2, Rotation: rotation, HideHud: true, Shadowing: true);
-                            var symbolObj2 = new HudAPIv2.BillBoardHUDMessage(symbolList[contact.sizeEnum], vectorToPt, adjColor, Width: symbolWidth, Height: symbolHeight, TimeToLive: 2, HideHud: true, Shadowing: true);
+                            var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbolOffscreenArrow, vectorToPt, adjColor, Width: s.offscreenWidth, Height: offscreenHeight, TimeToLive: 2, Rotation: rotation, HideHud: true, Shadowing: true);
+                            var symbolObj2 = new HudAPIv2.BillBoardHUDMessage(symbolList[contact.sizeEnum], vectorToPt, adjColor, Width: s.symbolWidth, Height: symbolHeight, TimeToLive: 2, HideHud: true, Shadowing: true);
                         }
                     }
                 }
@@ -242,6 +232,10 @@ namespace ThrustBeacon
             {
                 MyEntities.OnEntityCreate -= OnEntityCreate;
                 Clean();
+            }
+            else
+            {
+                Save(Settings.Instance);
             }
             if (wcAPI != null)
                 wcAPI.Unload();

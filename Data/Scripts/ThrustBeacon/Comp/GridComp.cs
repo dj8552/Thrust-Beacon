@@ -33,7 +33,7 @@ namespace ThrustBeacon
                 var curFaction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(block.CubeGrid.BigOwners[0]);
                 if (curFaction != null)
                 {
-                    faction = curFaction.Tag + ".";//TODO look at whether passing the faction tag over the net is more efficient as bytes
+                    faction = curFaction.Tag + ".";
                 }
             }
 

@@ -28,10 +28,9 @@ namespace Digi.Example_NetworkProtobuf
         /// <returns>Return true if you want the packet to be sent to other clients (only works server side)</returns>
         public bool Received()
         {
-            //TODO:  Handler for multiple servers sending in lists
             foreach (var signalRcvd in signalData)
             {
-                if(Session.SignalList.ContainsKey(signalRcvd.entityID))//TODO:  Any error checking on received data?
+                if(Session.SignalList.ContainsKey(signalRcvd.entityID))//TODO:  Any error checking needed on received data?
                 {
                     var updateTuple = new MyTuple<SignalComp, int>(signalRcvd, Session.Tick);
                     Session.SignalList[signalRcvd.entityID] = updateTuple;
