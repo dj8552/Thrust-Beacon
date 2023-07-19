@@ -31,8 +31,8 @@ namespace ThrustBeacon
 
         internal MyStringId symbolOffscreen = MyStringId.GetOrCompute("Arrow");
         internal List<MyStringId> symbolList = new List<MyStringId>(){MyStringId.GetOrCompute("IdleSignal"), MyStringId.GetOrCompute("SmallSignal"), MyStringId.GetOrCompute("MediumSignal"),
-        MyStringId.GetOrCompute("LargeSignal"), MyStringId.GetOrCompute("HugeSignal"), MyStringId.GetOrCompute("MassiveSignal")};
-        internal List<string> messageList = new List<string>() {"Idle Sig", "Small Sig", "Medium Sig", "Large Sig", "Huge Sig", "Massive Sig"};
+        MyStringId.GetOrCompute("LargeSignal"), MyStringId.GetOrCompute("HugeSignal"), MyStringId.GetOrCompute("MassiveSignal"), MyStringId.GetOrCompute("MassiveSignal")}; //TODO unique symbol for overheat/shutdown?
+        internal List<string> messageList = new List<string>() {"Idle Sig", "Small Sig", "Medium Sig", "Large Sig", "Huge Sig", "Massive Sig", "OVERHEAT - SHUTDOWN"};
         internal float symbolHeight = 0f;//Leave this as zero, monitor aspect ratio is figured in later
         internal float aspectRatio = 0f;//Leave this as zero, monitor aspect ratio is figured in later
         internal Vector2D offscreenSquish = new Vector2D(0.9, 0.7);

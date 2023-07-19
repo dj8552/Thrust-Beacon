@@ -51,7 +51,7 @@ namespace ThrustBeacon
                 else if (name.Contains("mesx"))
                     divisor = 5184;
                 else
-                    switch (name)
+                    switch (name) //TODO look at rolling these into a dict that's loaded by the server- puts these values in an external cfg
                     {
                         case "arylnx_raider_epstein_drive":
                             divisor = 733;
@@ -126,9 +126,9 @@ namespace ThrustBeacon
 
         internal void CalcThrust()
         {
-            if (thrustList.Count == 0 && !powerShutdown)
+            if ((thrustList.Count == 0 && !powerShutdown) || (Grid.IsStatic && broadcastDist == 1)) //TODO sort out skipping for static grids too
             {
-                broadcastDist = 0;
+                broadcastDist = 0; //Zeroing these out so a grid that loses thrusters completely does not get a phantom signal locked to it
                 sizeEnum = 0;
                 return;
             }
@@ -156,23 +156,23 @@ namespace ThrustBeacon
                     broadcastDist = 1;
             }
 
-            if (broadcastDist < 100f)//Idle
+            if (broadcastDist < 100)//Idle
             {
                 sizeEnum = 0;
             }
-            else if (broadcastDist < 8000f)//Small
+            else if (broadcastDist < 8000)//Small
             {
                 sizeEnum = 1;
             }
-            else if (broadcastDist < 25000f)//Medium
+            else if (broadcastDist < 25000)//Medium
             {
                 sizeEnum = 2;
             }
-            else if (broadcastDist < 100000f)//Large
+            else if (broadcastDist < 100000)//Large
             {
                 sizeEnum = 3;
             }
-            else if (broadcastDist < 250000f)//Huge
+            else if (broadcastDist < 250000)//Huge
             {
                 sizeEnum = 4;
             }
@@ -182,7 +182,10 @@ namespace ThrustBeacon
             }
 
             if (broadcastDist >= 500000 && !powerShutdown)
+            {
+                sizeEnum = 6;
                 Session.shutdownList.Add(this);
+            }
             else if (broadcastDist < 500000 && powerShutdown)
                 Session.shutdownList.Remove(this);
             broadcastDistSqr = (long)broadcastDist * broadcastDist;
