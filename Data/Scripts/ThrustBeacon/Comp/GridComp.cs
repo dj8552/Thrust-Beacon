@@ -18,6 +18,23 @@ namespace ThrustBeacon
         internal VRage.Game.MyCubeSize gridSize;
         internal byte sizeEnum;
 
+        internal Dictionary<string, int> epsteinDivisorMap = new Dictionary<string, int>()
+        {
+            { "arylnx_raider_epstein_drive", 733 },
+            { "arylnx_quadra_epstein_drive", 625 },
+            { "arylnx_munr_epstein_drive", 1385 },
+            { "arylnx_epstein_drive", 1000 },
+            { "arylnx_roci_epstein_drive", 1138},
+            { "arylynx_silversmith_epstein_drive", 750 },
+            { "arylnx_scircocco_epstein_drive", 1447 },
+            { "arylnx_mega_epstein_drive", 1440 },
+            { "arylnx_rzb_epstein_drive", 250 },
+            { "aryxlnx_yacht_epstein_drive", 1250 },
+            { "arylnx_pndr_epstein_drive", 1052 },
+            { "arylnx_drummer_epstein_drive", 1206 },
+            { "arylnx_leo_epstein_drive", 1233 },
+        };
+
         internal void Init(MyCubeGrid grid, Session session)
         {
             Grid = grid;
@@ -46,69 +63,17 @@ namespace ThrustBeacon
             {
                 var name = thruster.BlockDefinition.SubtypeId.ToLower();
                 int divisor;
-                if(name.Contains("rcs"))
+                if (name.Contains("rcs"))
                     divisor = 5184;
                 else if (name.Contains("mesx"))
                     divisor = 5184;
                 else
-                    switch (name)
+                {
+                    if (!epsteinDivisorMap.TryGetValue(name, out divisor))
                     {
-                        case "arylnx_raider_epstein_drive":
-                            divisor = 733;
-                            break;
-
-                        case "arylnx_quadra_epstein_drive":
-                            divisor = 625;
-                            break;
-
-                        case "arylnx_munr_epstein_drive":
-                            divisor = 1385;
-                            break;
-
-                        case "arylnx_epstein_drive":
-                            divisor = 1000;
-                            break;
-
-                        case "arylnx_roci_epstein_drive":
-                            divisor = 1138;
-                            break;
-
-                        case "arylynx_silversmith_epstein_drive":
-                            divisor = 1750;
-                            break;
-
-                        case "arylnx_scircocco_epstein_drive":
-                            divisor = 1447;
-                            break;
-
-                        case "arylnx_mega_epstein_drive":
-                            divisor = 1440;
-                            break;
-
-                        case "arylnx_rzb_epstein_drive":
-                            divisor = 1250;
-                            break;
-
-                        case "aryxlnx_yacht_epstein_drive":
-                            divisor = 1250;
-                            break;
-
-                        case "arylnx_pndr_epstein_drive":
-                            divisor = 1052;
-                            break;
-
-                        case "arylnx_drummer_epstein_drive":
-                            divisor = 1206;
-                            break;
-
-                        case "arylnx_leo_epstein_drive":
-                            divisor = 1233;
-                            break;
-
-                        default:
-                            divisor = 600;
-                            break;
+                        divisor = 600; // Default if unknown thruster
                     }
+                }
                 thrustList.Add(thruster, divisor);
             }
         }
