@@ -76,8 +76,8 @@ namespace ThrustBeacon
                     var tempList = new List<SignalComp>();
                     foreach (var grid in GridList)
                     {
-                        if (grid.broadcastDist == 0) continue;
                         var playerGrid = grid.Grid.EntityId == controlledEnt;
+                        if (!playerGrid && grid.broadcastDist == 0) continue;
                         var gridPos = grid.Grid.PositionComp.WorldAABB.Center;
                         var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
                         if (playerGrid || distToTargSqr <= grid.broadcastDistSqr)
