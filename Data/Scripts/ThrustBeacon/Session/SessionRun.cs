@@ -51,13 +51,13 @@ namespace ThrustBeacon
         private void PlayerConnected(long playerId)
         {
             var player = MyAPIGateway.Players.GetPlayerControllingEntity(MyAPIGateway.Entities.GetEntityById(playerId));
-            PlayerList.Add(player);
+            //PlayerList.Add(player);
         }
 
         private void PlayerDisconnected(long playerId)
         {
             var player = MyAPIGateway.Players.GetPlayerControllingEntity(MyAPIGateway.Entities.GetEntityById(playerId));
-            PlayerList.Remove(player);
+            //PlayerList.Remove(player);
         }
 
         public override void UpdateBeforeSimulation()
