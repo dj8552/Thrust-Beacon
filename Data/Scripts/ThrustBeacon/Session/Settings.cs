@@ -79,11 +79,74 @@ namespace ThrustBeacon
             writer.Close();
             Settings.Instance = settings;
         }
+        HudAPIv2.MenuRootCategory SettingsMenu;
+        HudAPIv2.MenuSubCategory MoveSignalDisplay;
+        HudAPIv2.MenuItem MoveLeft, MoveRight, MoveUp, MoveDown, MoveReset;
+        HudAPIv2.MenuColorPickerInput SignalColor;
+        HudAPIv2.MenuTextInput TextSize, OwnTextSize, SymbolSize;
+
 
         private void InitMenu()
         {
-            //menu stuff here
+            SettingsMenu = new HudAPIv2.MenuRootCategory("Thrust Signal", HudAPIv2.MenuRootCategory.MenuFlag.PlayerMenu, "Thrust Signal Settings");
+            SignalColor = new HudAPIv2.MenuColorPickerInput("Select Signal Color >>", SettingsMenu, Settings.Instance.signalColor, "Select Color", ColorSignal);
+            SymbolSize = new HudAPIv2.MenuTextInput("Adjust Symbol Size >>", SettingsMenu, "Adjust Symbol Size - Default is 0.04", AdjSymbolSize);
+            TextSize = new HudAPIv2.MenuTextInput("Adjust Label Text Size >>", SettingsMenu, "Adjust Label Text Size - Default is 1", AdjLabelSize);
+            OwnTextSize = new HudAPIv2.MenuTextInput("Adjust Broadcast Info Size >>", SettingsMenu, "Adjust Broadcast Info Size - Default is 1", AdjLabelSize);
+            MoveSignalDisplay = new HudAPIv2.MenuSubCategory("Move Broadcast Info Location >>", SettingsMenu, "Broadcast Info Location");
+                MoveLeft = new HudAPIv2.MenuItem("Move Left", MoveSignalDisplay, LeftMove);
+                MoveRight = new HudAPIv2.MenuItem("Move Right", MoveSignalDisplay, RightMove);
+                MoveUp = new HudAPIv2.MenuItem("Move Up", MoveSignalDisplay, UpMove);
+                MoveDown = new HudAPIv2.MenuItem("Move Down", MoveSignalDisplay, DownMove);
+                MoveReset = new HudAPIv2.MenuItem("Reset Position", MoveSignalDisplay, ResetMove);
+        }
 
+        private void LeftMove()
+        {
+            Settings.Instance.signalDrawCoords += new Vector2D(-0.01, 0);
+        }
+        private void RightMove()
+        {
+            Settings.Instance.signalDrawCoords += new Vector2D(0.01, 0);
+        }
+        private void UpMove()
+        {
+            Settings.Instance.signalDrawCoords += new Vector2D(0, 0.01);
+        }
+        private void DownMove()
+        {
+            Settings.Instance.signalDrawCoords += new Vector2D(0, -0.01);
+        }
+        private void ResetMove()
+        {
+            Settings.Instance.signalDrawCoords = new Vector2D(-0.7, -0.625);
+        }
+        private void ColorSignal(Color obj)
+        {
+            Settings.Instance.signalColor = obj;
+        }
+
+        private void AdjSymbolSize(string obj)
+        {
+            float getter;
+            if (!float.TryParse(obj, out getter))
+                return;
+            Settings.Instance.symbolWidth = getter;
+        }
+
+        private void AdjLabelSize(string obj)
+        {
+            float getter;
+            if (!float.TryParse(obj, out getter))
+                return;
+            Settings.Instance.textSize = getter;
+        }
+        private void AdjOwnLabelSize(string obj)
+        {
+            float getter;
+            if (!float.TryParse(obj, out getter))
+                return;
+            Settings.Instance.textSizeOwn = getter;
         }
 
     }
