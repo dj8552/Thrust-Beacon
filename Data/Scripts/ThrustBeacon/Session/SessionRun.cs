@@ -6,6 +6,7 @@ using Sandbox.ModAPI;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Sandbox.Game;
 using VRage;
 using VRage.Game.Components;
 using VRage.Game.Entity;
@@ -29,6 +30,8 @@ namespace ThrustBeacon
             if (Server)
             {
                 MyEntities.OnEntityCreate += OnEntityCreate;
+                MyVisualScriptLogicProvider.PlayerConnected += PlayerConnected;
+                MyVisualScriptLogicProvider.PlayerDisconnected += PlayerDisconnected;
                 //TODO: Hook player joining for server and populate PlayerList, or just jam GetPlayers in Update?
             }
             if (Client)
@@ -42,6 +45,21 @@ namespace ThrustBeacon
             if (!MPActive)
                 PlayerList.Add(MyAPIGateway.Session.Player);
         }
+
+        
+
+        private void PlayerConnected(long playerId)
+        {
+            var player = MyAPIGateway.Players.GetPlayerControllingEntity(MyAPIGateway.Entities.GetEntityById(playerId));
+            PlayerList.Add(player);
+        }
+
+        private void PlayerDisconnected(long playerId)
+        {
+            var player = MyAPIGateway.Players.GetPlayerControllingEntity(MyAPIGateway.Entities.GetEntityById(playerId));
+            PlayerList.Remove(player);
+        }
+
         public override void UpdateBeforeSimulation()
         {
             if (Client && symbolHeight == 0)//TODO see if there's a better spot for this that only runs once... seems like Camera isn't available in LoadData
@@ -231,6 +249,8 @@ namespace ThrustBeacon
             if (Server)
             {
                 MyEntities.OnEntityCreate -= OnEntityCreate;
+                MyVisualScriptLogicProvider.PlayerDisconnected -= PlayerDisconnected;
+                MyVisualScriptLogicProvider.PlayerConnected -= PlayerConnected;
                 Clean();
             }
             else
