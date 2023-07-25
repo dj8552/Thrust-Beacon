@@ -56,8 +56,6 @@ namespace ThrustBeacon
             Tick++;
             if (Server && Tick % 60 == 0)
             {
-                MyLog.Default.WriteLineAndConsole($"Server loop in updateBeforeSim player Count: {PlayerList.Count}");
-
                 foreach (var gridComp in GridList)
                 {
                     if (gridComp.thrustList.Count > 0)
@@ -74,11 +72,7 @@ namespace ThrustBeacon
                 foreach (var player in PlayerList)
                 {
                     if (player == null || player.Character == null || (MPActive && player.SteamUserId == 0))
-                    {
-                        MyLog.Default.WriteLineAndConsole($"Bailed out {(player == null ? "Player is null" : "")}");
-
                         continue; 
-                    }
 
                     var playerPos = player.Character.WorldAABB.Center;
                     if (playerPos == Vector3D.Zero)
