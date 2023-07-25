@@ -15,6 +15,7 @@ namespace ThrustBeacon
         internal int broadcastDistOld;
         internal long broadcastDistSqr;
         internal string faction = "";
+        internal long factionID = 0;
         internal VRage.Game.MyCubeSize gridSize;
         internal byte sizeEnum;
 
@@ -51,6 +52,7 @@ namespace ThrustBeacon
                 if (curFaction != null)
                 {
                     faction = curFaction.Tag + ".";
+                    factionID = curFaction.FactionId;
                 }
             }
 

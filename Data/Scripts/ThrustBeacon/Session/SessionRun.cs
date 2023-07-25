@@ -12,6 +12,7 @@ using VRage.Game.Components;
 using VRage.Game.Entity;
 using VRage.Utils;
 using VRageMath;
+using VRage.Game.ModAPI;
 
 namespace ThrustBeacon
 {
@@ -30,9 +31,6 @@ namespace ThrustBeacon
             if (Server)
             {
                 MyEntities.OnEntityCreate += OnEntityCreate;
-                MyVisualScriptLogicProvider.PlayerConnected += PlayerConnected;
-                MyVisualScriptLogicProvider.PlayerDisconnected += PlayerDisconnected;
-                //TODO: Hook player joining for server and populate PlayerList, or just jam GetPlayers in Update?
             }
             if (Client)
             {
@@ -42,23 +40,9 @@ namespace ThrustBeacon
                 wcAPI.Load();
                 viewDist = Math.Min(Session.SessionSettings.SyncDistance, Session.SessionSettings.ViewDistance);
             }
-            if (!MPActive)
-                PlayerList.Add(MyAPIGateway.Session.Player);
         }
 
-        
 
-        private void PlayerConnected(long playerId)
-        {
-            var player = MyAPIGateway.Players.GetPlayerControllingEntity(MyAPIGateway.Entities.GetEntityById(playerId));
-            //PlayerList.Add(player);
-        }
-
-        private void PlayerDisconnected(long playerId)
-        {
-            var player = MyAPIGateway.Players.GetPlayerControllingEntity(MyAPIGateway.Entities.GetEntityById(playerId));
-            //PlayerList.Remove(player);
-        }
 
         public override void UpdateBeforeSimulation()
         {
@@ -72,6 +56,8 @@ namespace ThrustBeacon
             Tick++;
             if (Server && Tick % 60 == 0)
             {
+                MyLog.Default.WriteLineAndConsole($"Server loop in updateBeforeSim player Count: {PlayerList.Count}");
+
                 foreach (var gridComp in GridList)
                 {
                     if (gridComp.thrustList.Count > 0)
@@ -79,11 +65,21 @@ namespace ThrustBeacon
                 }
                 //Find player controlled entities in range and broadcast to them
                 PlayerList.Clear();
-                MyAPIGateway.Multiplayer.Players.GetPlayers(PlayerList);//Kinda gross...
-                if (!MPActive) PlayerList.Add(Session.Player);
+
+                if (MPActive)
+                    MyAPIGateway.Multiplayer.Players.GetPlayers(PlayerList);
+                else
+                    PlayerList.Add(Session.Player);
+
                 foreach (var player in PlayerList)
                 {
-                    if (player.Character == null || (MPActive && player.SteamUserId == 0)) continue;
+                    if (player == null || player.Character == null || (MPActive && player.SteamUserId == 0))
+                    {
+                        MyLog.Default.WriteLineAndConsole($"Bailed out {(player == null ? "Player is null" : "")}");
+
+                        continue; 
+                    }
+
                     var playerPos = player.Character.WorldAABB.Center;
                     if (playerPos == Vector3D.Zero)
                     {
@@ -91,6 +87,7 @@ namespace ThrustBeacon
                         continue;
                     }
                     var controlledEnt = player.Controller?.ControlledEntity?.Entity?.Parent?.EntityId;
+                    var playerFaction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(player.IdentityId);
                     var tempList = new List<SignalComp>();
                     foreach (var grid in GridList)
                     {
@@ -106,6 +103,13 @@ namespace ThrustBeacon
                             signalData.faction = grid.faction;
                             signalData.entityID = grid.Grid.EntityId;
                             signalData.sizeEnum = grid.sizeEnum;
+                            if (false || playerFaction != null)
+                            {
+                                var relation = MyAPIGateway.Session.Factions.GetRelationBetweenFactions(playerFaction.FactionId, grid.factionID);
+                                signalData.relation = (byte)relation;
+                            }
+                            else
+                                signalData.relation = 0;
                             tempList.Add(signalData);
 
                             if(!MPActive)
@@ -145,23 +149,24 @@ namespace ThrustBeacon
                     {
                         entityIDList.Add(item.EntityId);
                     }
+                    foreach (var wcContact in entityIDList)
+                    {
+                        if (SignalList.ContainsKey(wcContact))
+                            SignalList.Remove(wcContact);
+                    }
                 }
-                foreach (var wcContact in entityIDList)
-                {
-                    if (SignalList.ContainsKey(wcContact))
-                        SignalList.Remove(wcContact);
-                }
+
                 //temp sample points
                 if (Tick % 600 == 0 && !SignalList.ContainsKey(0) && !SignalList.ContainsKey(1))
                 {
-                    var temp1 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "Mover (won't fade for a real one)", range = 1234, position = new Vector3I(1000, 2000, 3000), entityID = 0, sizeEnum = 3 }, Tick);
-                    var temp2 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "Lost Signal", range = 4567000, position = new Vector3I(11000, 2000, 3000), entityID = 0, sizeEnum = 2 }, Tick);
+                    var temp1 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "Mover (won't fade for a real one)", range = 1234, position = new Vector3I(1000, 2000, 3000), entityID = 0, sizeEnum = 3, relation = 0 }, Tick);
+                    var temp2 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "Lost Signal", range = 4567000, position = new Vector3I(11000, 2000, 3000), entityID = 0, sizeEnum = 2, relation = 1 }, Tick);
                     SignalList.TryAdd(0, temp1);
                     SignalList.TryAdd(1, temp2);
                 }
 
                 if (SignalList.ContainsKey(2)) SignalList.Remove(2);
-                var temp3 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "Norm Update", range = 4567000, position = new Vector3I(101000, 2000, 3000), entityID = 0, sizeEnum = 4 }, Tick);
+                var temp3 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "Norm Update", range = 4567000, position = new Vector3I(101000, 2000, 3000), entityID = 0, sizeEnum = 4, relation = 3 }, Tick);
                 SignalList.TryAdd(2, temp3);
                 //temp moving point for positional update tests
                 if (SignalList.ContainsKey(0)) SignalList[0].Item1.position += new Vector3I(100, 0, 0);
@@ -204,13 +209,14 @@ namespace ThrustBeacon
                             SignalList.Remove(signal.Key);
                             continue;
                         }
-                        var adjColor = s.signalColor;
+                        var baseColor = contact.relation == 1 ? s.enemyColor : contact.relation == 3 ? s.friendColor : s.neutralColor;
+                        var adjColor = baseColor;
                         if (s.fadeOutTime > 0)
                         {
                             byte colorFade = (byte)(contactAge < s.fadeOutTime ? 0 : (contactAge - s.fadeOutTime) / 2);
-                            adjColor.R = (byte)MathHelper.Clamp(s.signalColor.R - colorFade, 0, 255);
-                            adjColor.G = (byte)MathHelper.Clamp(s.signalColor.G - colorFade, 0, 255);
-                            adjColor.B = (byte)MathHelper.Clamp(s.signalColor.B - colorFade, 0, 255);
+                            adjColor.R = (byte)MathHelper.Clamp(baseColor.R - colorFade, 0, 255);
+                            adjColor.G = (byte)MathHelper.Clamp(baseColor.G - colorFade, 0, 255);
+                            adjColor.B = (byte)MathHelper.Clamp(baseColor.B - colorFade, 0, 255);
                         }
 
                         var adjustedPos = camPos + Vector3D.Normalize((Vector3D)contact.position - camPos) * viewDist;
@@ -248,12 +254,10 @@ namespace ThrustBeacon
         {
             if (Server)
             {
-                MyEntities.OnEntityCreate -= OnEntityCreate;
-                MyVisualScriptLogicProvider.PlayerDisconnected -= PlayerDisconnected;
-                MyVisualScriptLogicProvider.PlayerConnected -= PlayerConnected;
+                MyEntities.OnEntityCreate -= OnEntityCreate;       
                 Clean();
             }
-            else
+            if(Client)
             {
                 Save(Settings.Instance);
             }

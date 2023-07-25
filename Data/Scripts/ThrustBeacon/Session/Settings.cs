@@ -15,7 +15,9 @@ namespace ThrustBeacon
         public static Settings Instance;
         public static readonly Settings Default = new Settings()
         {
-            signalColor = Color.Yellow,
+            friendColor = Color.Green,
+            enemyColor = Color.Red,
+            neutralColor = Color.White,
             symbolWidth = 0.04f,
             offscreenWidth = 0.1f,
             fadeOutTime = 90,
@@ -26,7 +28,7 @@ namespace ThrustBeacon
         };
 
         [ProtoMember(1)]
-        public Color signalColor { get; set; }
+        public Color friendColor { get; set; }
 
         [ProtoMember(2)]
         public float symbolWidth { get; set; }
@@ -48,6 +50,12 @@ namespace ThrustBeacon
 
         [ProtoMember(8)]
         public Vector2D signalDrawCoords { get; set; }
+
+        [ProtoMember(9)]
+        public Color enemyColor { get; set; }
+
+        [ProtoMember(10)]
+        public Color neutralColor { get; set; }
     }
     public partial class Session
     {
@@ -81,15 +89,19 @@ namespace ThrustBeacon
         }
         HudAPIv2.MenuRootCategory SettingsMenu;
         HudAPIv2.MenuSubCategory MoveSignalDisplay;
-        HudAPIv2.MenuItem MoveLeft, MoveRight, MoveUp, MoveDown, MoveReset;
-        HudAPIv2.MenuColorPickerInput SignalColor;
+        HudAPIv2.MenuItem MoveLeft, MoveRight, MoveUp, MoveDown, MoveReset, Reset, Blank;
+        HudAPIv2.MenuColorPickerInput FriendColor, EnemyColor, NeutralColor;
         HudAPIv2.MenuTextInput TextSize, OwnTextSize, SymbolSize;
 
 
         private void InitMenu()
         {
             SettingsMenu = new HudAPIv2.MenuRootCategory("Thrust Signal", HudAPIv2.MenuRootCategory.MenuFlag.PlayerMenu, "Thrust Signal Settings");
-            SignalColor = new HudAPIv2.MenuColorPickerInput("Select Signal Color >>", SettingsMenu, Settings.Instance.signalColor, "Select Color", ColorSignal);
+            FriendColor = new HudAPIv2.MenuColorPickerInput("Select Friendly Signal Color >>", SettingsMenu, Settings.Instance.friendColor, "Select Color", ColorFriend);
+            EnemyColor = new HudAPIv2.MenuColorPickerInput("Select Enemy Signal Color >>", SettingsMenu, Settings.Instance.enemyColor, "Select Color", ColorEnemy);
+            NeutralColor = new HudAPIv2.MenuColorPickerInput("Select Neutral Signal Color >>", SettingsMenu, Settings.Instance.neutralColor, "Select Color", ColorNeutral);
+
+
             SymbolSize = new HudAPIv2.MenuTextInput("Adjust Symbol Size >>", SettingsMenu, "Adjust Symbol Size - Default is 0.04", AdjSymbolSize);
             TextSize = new HudAPIv2.MenuTextInput("Adjust Label Text Size >>", SettingsMenu, "Adjust Label Text Size - Default is 1", AdjLabelSize);
             OwnTextSize = new HudAPIv2.MenuTextInput("Adjust Broadcast Info Size >>", SettingsMenu, "Adjust Broadcast Info Size - Default is 1", AdjLabelSize);
@@ -99,6 +111,9 @@ namespace ThrustBeacon
                 MoveUp = new HudAPIv2.MenuItem("Move Up", MoveSignalDisplay, UpMove);
                 MoveDown = new HudAPIv2.MenuItem("Move Down", MoveSignalDisplay, DownMove);
                 MoveReset = new HudAPIv2.MenuItem("Reset Position", MoveSignalDisplay, ResetMove);
+            Blank = new HudAPIv2.MenuItem("- - - - - - - - - - -", SettingsMenu, null);
+
+            Reset = new HudAPIv2.MenuItem("Reset all Settings", SettingsMenu, ResetSettings);
         }
 
         private void LeftMove()
@@ -121,9 +136,17 @@ namespace ThrustBeacon
         {
             Settings.Instance.signalDrawCoords = new Vector2D(-0.7, -0.625);
         }
-        private void ColorSignal(Color obj)
+        private void ColorFriend(Color obj)
         {
-            Settings.Instance.signalColor = obj;
+            Settings.Instance.friendColor = obj;
+        }
+        private void ColorNeutral(Color obj)
+        {
+            Settings.Instance.neutralColor = obj;
+        }
+        private void ColorEnemy(Color obj)
+        {
+            Settings.Instance.enemyColor = obj;
         }
 
         private void AdjSymbolSize(string obj)
@@ -147,6 +170,14 @@ namespace ThrustBeacon
             if (!float.TryParse(obj, out getter))
                 return;
             Settings.Instance.textSizeOwn = getter;
+        }
+        private void ResetSettings()
+        {
+            MyAPIGateway.Utilities.ShowNotification("Options reset to default");
+            var tempSettings = new Settings();
+            tempSettings = Settings.Default;
+            Settings.Instance = tempSettings;
+            Save(tempSettings);
         }
 
     }
