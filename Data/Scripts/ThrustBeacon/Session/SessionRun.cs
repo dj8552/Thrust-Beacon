@@ -153,14 +153,15 @@ namespace ThrustBeacon
                 //temp sample points
                 if (Tick % 600 == 0 && !SignalList.ContainsKey(0) && !SignalList.ContainsKey(1))
                 {
-                    var temp1 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "Mover (won't fade for a real one)", range = 1234, position = new Vector3I(1000, 2000, 3000), entityID = 0, sizeEnum = 3, relation = 0 }, Tick);
-                    var temp2 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "Lost Signal", range = 4567000, position = new Vector3I(11000, 2000, 3000), entityID = 0, sizeEnum = 2, relation = 1 }, Tick);
+
+                    var temp1 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "Mover (won't fade for a real one)", range = 1234, position = new Vector3I(1000, 2000, 3000), entityID = 123, sizeEnum = 3, relation = 0 }, Tick);
+                    var temp2 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "Lost Signal", range = 4567000, position = new Vector3I(11000, 2000, 3000), entityID = 456, sizeEnum = 2, relation = 1 }, Tick);
                     SignalList.TryAdd(0, temp1);
                     SignalList.TryAdd(1, temp2);
                 }
 
                 if (SignalList.ContainsKey(2)) SignalList.Remove(2);
-                var temp3 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "Norm Update", range = 4567000, position = new Vector3I(101000, 2000, 3000), entityID = 0, sizeEnum = 4, relation = 3 }, Tick);
+                var temp3 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "Norm Update", range = 4567000, position = new Vector3I(500000, 2000, 3000), entityID = 789, sizeEnum = 4, relation = 3 }, Tick);
                 SignalList.TryAdd(2, temp3);
                 //temp moving point for positional update tests
                 if (SignalList.ContainsKey(0)) SignalList[0].Item1.position += new Vector3I(100, 0, 0);
@@ -174,6 +175,34 @@ namespace ThrustBeacon
                     gridComp.TogglePower();
             }
 
+        }
+
+        public float ComputeSignalStrength(SignalComp contact, float distance)
+        {
+            float maxJitterDistance = 400000f;
+            float f = distance / maxJitterDistance;
+            // TODO - Add in a way to calculate signal strength, and boost it if the piloted grid has antenna(s)/tech
+            return 1.0f - Math.Min(f, 1.0f);
+        }
+
+        public Vector3I GetRandomJitter(SignalComp contact, Vector3 camPos)
+        {
+            int tickRate = 20;
+            float minimumJitterCutoff = 0.25f;
+            float maxJitterAmount = 6000;
+
+            float distance = Vector3.Distance(contact.position, camPos);
+            Random random = new Random((int)contact.entityID + (Tick / tickRate));
+            float amount = 1.0f - ComputeSignalStrength(contact, distance);
+            amount = amount < minimumJitterCutoff ? 0.0f : amount;
+
+            int jitter = (int)MathHelper.Lerp(0, maxJitterAmount, amount * amount);
+            int x = random.Next(jitter * 2) - jitter;
+            int y = random.Next(jitter * 2) - jitter;
+            int z = random.Next(jitter * 2) - jitter;
+            Vector3I offset = new Vector3I(x, y, z);
+
+            return offset;
         }
 
         public override void Draw()
@@ -190,7 +219,7 @@ namespace ThrustBeacon
                     var contact = signal.Value.Item1;
                     if (contact.entityID == playerEnt)
                     {
-                        var dispRange = contact.range > 1000 ? (contact.range / 1000f).ToString("0.0") + " km" : contact.range + " m";
+                        var dispRange = contact.range > 1000 ? (contact.range / 1000f).ToString("0.#") + " km" : contact.range + " m";
                         var info = new StringBuilder("Broadcast Dist: " + dispRange + "\n" + "Size: " + messageList[contact.sizeEnum]);
                         var Label = new HudAPIv2.HUDMessage(info, s.signalDrawCoords, null, 2, s.textSizeOwn, true, true);
                         Label.Visible = true;
@@ -213,14 +242,16 @@ namespace ThrustBeacon
                             adjColor.B = (byte)MathHelper.Clamp(baseColor.B - colorFade, 0, 255);
                         }
 
-                        var adjustedPos = camPos + Vector3D.Normalize((Vector3D)contact.position - camPos) * viewDist;
+                        var contactPosition = contact.position + GetRandomJitter(contact, camPos);
+                        var adjustedPos = camPos + Vector3D.Normalize((Vector3D)contactPosition - camPos) * viewDist;
                         var screenCoords = Vector3D.Transform(adjustedPos, viewProjectionMat);
                         var offScreen = screenCoords.X > 1 || screenCoords.X < -1 || screenCoords.Y > 1 || screenCoords.Y < -1 || screenCoords.Z > 1;
                         if (!offScreen)
                         {
                             var symbolPosition = new Vector2D(screenCoords.X, screenCoords.Y);
                             var labelPosition = new Vector2D(screenCoords.X + (symbolHeight * 0.4), screenCoords.Y + (symbolHeight * 0.5));
-                            var dispRange = contact.range > 1000 ? contact.range / 1000 + " km" : contact.range + " m";
+                            float distance = Vector3.Distance(contact.position, camPos);
+                            var dispRange = distance > 1000 ? (distance / 1000).ToString("0.#") + " km" : distance.ToString("0.#") + " m";
                             var info = new StringBuilder(contact.faction + messageList[contact.sizeEnum] + "\n" + dispRange);
                             var Label = new HudAPIv2.HUDMessage(info, labelPosition, new Vector2D(0, -0.001), 2, s.textSize, true, true);
                             Label.InitialColor = adjColor;
