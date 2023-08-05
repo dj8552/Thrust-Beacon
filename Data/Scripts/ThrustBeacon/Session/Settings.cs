@@ -19,7 +19,7 @@ namespace ThrustBeacon
             enemyColor = Color.Red,
             neutralColor = Color.White,
             symbolWidth = 0.04f,
-            offscreenWidth = 0.1f,
+            offscreenWidth = 0.06f,
             fadeOutTime = 90,
             maxContactAge = 500,
             textSize = 1f,
