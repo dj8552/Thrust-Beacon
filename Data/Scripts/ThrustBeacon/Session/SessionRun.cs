@@ -13,6 +13,7 @@ using VRage.Game.Entity;
 using VRage.Utils;
 using VRageMath;
 using VRage.Game.ModAPI;
+using System.Diagnostics;
 
 namespace ThrustBeacon
 {
@@ -26,11 +27,14 @@ namespace ThrustBeacon
         public override void LoadData()
         {
             MPActive = MyAPIGateway.Multiplayer.MultiplayerActive;
-            Server = (MyAPIGateway.Multiplayer.MultiplayerActive && MyAPIGateway.Multiplayer.IsServer) || !MPActive; //TODO check if I jacked these up for actual application
+            Server = (MyAPIGateway.Multiplayer.MultiplayerActive && MyAPIGateway.Multiplayer.IsServer) || !MPActive;
             Client = (MyAPIGateway.Multiplayer.MultiplayerActive && !MyAPIGateway.Multiplayer.IsServer) || !MPActive;
             if (Server)
             {
                 MyEntities.OnEntityCreate += OnEntityCreate;
+                LoadSignalProducerConfigs();
+                LoadBlockConfigs();
+                InitServerConfig();
             }
             if (Client)
             {
@@ -59,7 +63,7 @@ namespace ThrustBeacon
                 foreach (var gridComp in GridList)
                 {
                     if (gridComp.thrustList.Count > 0)
-                        gridComp.CalcThrust();//TODO: See if there's a better way to account for pulsing/blipping the gas
+                        gridComp.CalcSignal();//TODO: See if there's a better way to account for pulsing/blipping the gas
                 }
                 //Find player controlled entities in range and broadcast to them
                 PlayerList.Clear();
@@ -165,14 +169,19 @@ namespace ThrustBeacon
                 SignalList.TryAdd(2, temp3);
                 //temp moving point for positional update tests
                 if (SignalList.ContainsKey(0)) SignalList[0].Item1.position += new Vector3I(100, 0, 0);
-                //end of temp
+                //end of temp sample points
             }
 
 
-            if (Server && Tick % 5 == 0 && shutdownList.Count > 0)//5 tick interval to keep players from spamming keys to turn power back on
+            if (Server && Tick % 5 == 0 && powershutdownList.Count > 0)//5 tick interval to keep players from spamming keys to turn power back on
             {
-                foreach (var gridComp in shutdownList.ToArray())
+                foreach (var gridComp in powershutdownList.ToArray())
                     gridComp.TogglePower();
+            }
+            if (Server && Tick % 5 == 0 && thrustshutdownList.Count > 0)//5 tick interval to keep players from spamming keys to turn power back on
+            {
+                foreach (var gridComp in thrustshutdownList.ToArray())
+                    gridComp.ToggleThrust();
             }
 
         }
@@ -181,15 +190,15 @@ namespace ThrustBeacon
         {
             float maxJitterDistance = 400000f;
             float f = distance / maxJitterDistance;
-            // TODO - Add in a way to calculate signal strength, and boost it if the piloted grid has antenna(s)/tech
+            // TODO - Add in a way to calculate signal strength, and boost it if the piloted grid has antenna(s)/tech (this should probably be server side)
             return 1.0f - Math.Min(f, 1.0f);
         }
 
         public Vector3I GetRandomJitter(SignalComp contact, Vector3 camPos)
         {
-            int tickRate = 20;
+            int tickRate = 60;
             float minimumJitterCutoff = 0.25f;
-            float maxJitterAmount = 6000;
+            float maxJitterAmount = 2000;
 
             float distance = Vector3.Distance(contact.position, camPos);
             Random random = new Random((int)contact.entityID + (Tick / tickRate));
@@ -201,7 +210,6 @@ namespace ThrustBeacon
             int y = random.Next(jitter * 2) - jitter;
             int z = random.Next(jitter * 2) - jitter;
             Vector3I offset = new Vector3I(x, y, z);
-
             return offset;
         }
 
@@ -297,7 +305,8 @@ namespace ThrustBeacon
             SignalList.Clear();
             threatList.Clear();
             obsList.Clear();
-            shutdownList.Clear();
+            powershutdownList.Clear();
+            thrustshutdownList.Clear();
         }
     }
 }

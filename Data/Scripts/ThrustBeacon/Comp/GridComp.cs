@@ -9,8 +9,9 @@ namespace ThrustBeacon
     {
         internal MyCubeGrid Grid;
         internal Dictionary<IMyThrust, int> thrustList = new Dictionary<IMyThrust, int>();
-        internal List<IMyPowerProducer> powerList = new List<IMyPowerProducer>();
+        internal Dictionary<IMyPowerProducer, int> powerList = new Dictionary<IMyPowerProducer, int>();
         internal bool powerShutdown = false;
+        internal bool thrustShutdown = false;
         internal int broadcastDist;
         internal int broadcastDistOld;
         internal long broadcastDistSqr;
@@ -18,24 +19,6 @@ namespace ThrustBeacon
         internal long factionID = 0;
         internal VRage.Game.MyCubeSize gridSize;
         internal byte sizeEnum;
-
-        internal Dictionary<string, int> epsteinDivisorMap = new Dictionary<string, int>()
-        {
-            { "arylnx_raider_epstein_drive", 733 },
-            { "arylnx_quadra_epstein_drive", 625 },
-            { "arylnx_munr_epstein_drive", 1385 },
-            { "arylnx_epstein_drive", 1000 },
-            { "arylnx_roci_epstein_drive", 1138},
-            { "arylynx_silversmith_epstein_drive", 750 },
-            { "arylnx_scircocco_epstein_drive", 1447 },
-            { "arylnx_mega_epstein_drive", 1440 },
-            { "arylnx_rzb_epstein_drive", 250 },
-            { "aryxlnx_yacht_epstein_drive", 1250 },
-            { "arylnx_pndr_epstein_drive", 1052 },
-            { "arylnx_drummer_epstein_drive", 1206 },
-            { "arylnx_leo_epstein_drive", 1233 },
-        };
-
         internal void Init(MyCubeGrid grid, Session session)
         {
             Grid = grid;
@@ -58,23 +41,22 @@ namespace ThrustBeacon
 
             var power = block as IMyPowerProducer;
             if (power != null)
-                powerList.Add(power);
+            {
+                int divisor;
+                if (!Session.SignalProducer.TryGetValue(power.BlockDefinition.SubtypeId, out divisor))
+                {
+                    divisor = ServerSettings.Instance.DefaultPowerDivisor;
+                }
+                powerList.Add(power, divisor);
+            }
 
             var thruster = block as IMyThrust;
             if (thruster != null)
             {
-                var name = thruster.BlockDefinition.SubtypeId.ToLower();
                 int divisor;
-                if (name.Contains("rcs"))
-                    divisor = 5184;
-                else if (name.Contains("mesx"))
-                    divisor = 5184;
-                else
+                if (!Session.SignalProducer.TryGetValue(thruster.BlockDefinition.SubtypeId, out divisor))
                 {
-                    if (!epsteinDivisorMap.TryGetValue(name, out divisor))
-                    {
-                        divisor = 600; // Default if unknown thruster
-                    }
+                    divisor = ServerSettings.Instance.DefaultThrustDivisor;
                 }
                 thrustList.Add(thruster, divisor);
             }
@@ -91,7 +73,7 @@ namespace ThrustBeacon
                 powerList.Remove(power);
         }
 
-        internal void CalcThrust()
+        internal void CalcSignal()
         {
             if ((thrustList.Count == 0 && !powerShutdown) || (Grid.IsStatic && broadcastDist == 1)) //TODO sort out skipping for static grids too
             {
@@ -99,30 +81,51 @@ namespace ThrustBeacon
                 sizeEnum = 0;
                 return;
             }
+            var ss = ServerSettings.Instance;
 
             broadcastDistOld = broadcastDist;
 
-            if (!Grid.IsStatic)
+            if (ss.IncludeThrustInSignal && !Grid.IsStatic)
             {
                 double rawThrustOutput = 0.0d;
                 foreach (var thrust in thrustList)
                 {
-                    if (thrust.Key.CurrentThrust == 0)
+                    var thrustOutput = thrust.Key.CurrentThrust;
+                    if (thrustOutput == 0)
                         continue;
-                    rawThrustOutput += thrust.Key.CurrentThrust / thrust.Value;
+                    rawThrustOutput += thrustOutput / thrust.Value;
                 }
                 broadcastDist = (int)rawThrustOutput;
             }
+
+            if (ss.IncludePowerInSignal)
+            {
+                double rawPowerOutput = 0.0d;
+                foreach (var power in powerList)
+                {
+                    var powerOutput = power.Key.CurrentOutput; //in MW
+                    if (powerOutput == 0)
+                        continue;
+                    rawPowerOutput += powerOutput / power.Value;
+                }
+            }
+
+            //Cooldown
             if (broadcastDistOld > broadcastDist || Grid.IsStatic)
             {
                 if (gridSize == 0)
-                    broadcastDist = (int)(broadcastDistOld * 0.95f);
+                    broadcastDist = (int)(broadcastDistOld * ss.LargeGridCooldownRate);
                 else
-                    broadcastDist = (int)(broadcastDistOld * 0.85f);
+                    broadcastDist = (int)(broadcastDistOld * ss.SmallGridCooldownRate);
                 if (broadcastDist <= 1)
                     broadcastDist = 1;
             }
 
+
+
+
+
+            //TODO roll these categories to server settings?
             if (broadcastDist < 100)//Idle
             {
                 sizeEnum = 0;
@@ -148,22 +151,45 @@ namespace ThrustBeacon
                 sizeEnum = 5;
             }
 
-            if (broadcastDist >= 500000 && !powerShutdown)
+            if (ss.ShutdownPowerOverMaxSignal)//TODO set up shutdown reason enum and a singular list
             {
-                sizeEnum = 6;
-                Session.shutdownList.Add(this);
+                if (broadcastDist >= ss.MaxSignalforPowerShutdown && !powerShutdown)
+                {
+                    sizeEnum = 6;
+                    Session.powershutdownList.Add(this);
+                }
+                else if (broadcastDist < ss.MaxSignalforPowerShutdown && powerShutdown)
+                    Session.powershutdownList.Remove(this);
             }
-            else if (broadcastDist < 500000 && powerShutdown)
-                Session.shutdownList.Remove(this);
+            if (ss.ShutdownThrustersOverMaxSignal)
+            {
+                if (broadcastDist >= ss.MaxSignalforThrusterShutdown && !thrustShutdown)
+                {
+                    sizeEnum = 6;
+                    Session.thrustshutdownList.Add(this);
+                }
+                else if (broadcastDist < ss.MaxSignalforThrusterShutdown && thrustShutdown)
+                    Session.thrustshutdownList.Remove(this);
+            }
+
+
+
+
             broadcastDistSqr = (long)broadcastDist * broadcastDist;
             return;
         }
 
         internal void TogglePower()
         {
-            foreach (var power in powerList.ToArray())
-                if (power.Enabled && !power.MarkedForClose)
-                    power.Enabled = false;
+            foreach (var power in powerList)
+                if (power.Key.Enabled && !power.Key.MarkedForClose)
+                    power.Key.Enabled = false;
+        }
+        internal void ToggleThrust()
+        {
+            foreach (var thrust in thrustList)
+                if (thrust.Key.Enabled && !thrust.Key.MarkedForClose)
+                    thrust.Key.Enabled = false;
         }
 
         internal void Clean()
