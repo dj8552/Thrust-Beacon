@@ -24,7 +24,10 @@ namespace ThrustBeacon
             ShutdownPowerOverMaxSignal = true,
             MaxSignalforPowerShutdown = 500000,
             ShutdownThrustersOverMaxSignal = true,
-            MaxSignalforThrusterShutdown = 500000
+            MaxSignalforThrusterShutdown = 500000,
+            IncludeWeaponHeatInSignal = true,
+            DefaultWeaponHeatDivisor = 1, //Explore further and find a good starting point for this value
+
 
 
         };
@@ -58,6 +61,12 @@ namespace ThrustBeacon
 
         [ProtoMember(10)]
         public double MaxSignalforThrusterShutdown { get; set; }
+
+        [ProtoMember(11)]
+        public bool IncludeWeaponHeatInSignal { get; set; }
+        
+        [ProtoMember(12)]
+        public double DefaultWeaponHeatDivisor { get; set; }
 
 
 

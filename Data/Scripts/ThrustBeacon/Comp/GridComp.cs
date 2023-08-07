@@ -1,6 +1,7 @@
 ﻿using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
 using System.Collections.Generic;
+using VRage.Game.Entity;
 using VRage.Game.ModAPI;
 
 namespace ThrustBeacon
@@ -10,6 +11,8 @@ namespace ThrustBeacon
         internal MyCubeGrid Grid;
         internal Dictionary<IMyThrust, int> thrustList = new Dictionary<IMyThrust, int>();
         internal Dictionary<IMyPowerProducer, int> powerList = new Dictionary<IMyPowerProducer, int>();
+        internal List<MyEntity> weaponList = new List<MyEntity>();
+
         internal bool powerShutdown = false;
         internal bool thrustShutdown = false;
         internal int broadcastDist;
@@ -39,38 +42,52 @@ namespace ThrustBeacon
                 }
             }
 
+            var subTypeID = block.BlockDefinition.Id.SubtypeId;
             var power = block as IMyPowerProducer;
+            var thruster = block as IMyThrust;
+            var weapon = Session.weaponSubtypeIDs.Contains(subTypeID);
+
+
             if (power != null)
             {
                 int divisor;
-                if (!Session.SignalProducer.TryGetValue(power.BlockDefinition.SubtypeId, out divisor))
+                if (!Session.SignalProducer.TryGetValue(subTypeID.ToString(), out divisor))
                 {
                     divisor = ServerSettings.Instance.DefaultPowerDivisor;
                 }
                 powerList.Add(power, divisor);
             }
-
-            var thruster = block as IMyThrust;
-            if (thruster != null)
+            else if (thruster != null)
             {
                 int divisor;
-                if (!Session.SignalProducer.TryGetValue(thruster.BlockDefinition.SubtypeId, out divisor))
+                if (!Session.SignalProducer.TryGetValue(subTypeID.ToString(), out divisor))
                 {
                     divisor = ServerSettings.Instance.DefaultThrustDivisor;
                 }
                 thrustList.Add(thruster, divisor);
             }
+            else if (weapon)
+            {
+                weaponList.Add(block);
+            }
+
+
+
         }
 
 
         internal void FatBlockRemoved(MyCubeBlock block)
         {
             var thrust = block as IMyThrust;
+            var power = block as IMyPowerProducer;
+            var weapon = Session.weaponSubtypeIDs.Contains(block.BlockDefinition.Id.SubtypeId);
+
             if (thrust != null)
                 thrustList.Remove(thrust);
-            var power = block as IMyPowerProducer;
-            if (power != null)
+            else if (power != null)
                 powerList.Remove(power);
+            else if (weapon)
+                weaponList.Remove(block);
         }
 
         internal void CalcSignal()
@@ -84,7 +101,9 @@ namespace ThrustBeacon
             var ss = ServerSettings.Instance;
 
             broadcastDistOld = broadcastDist;
+            broadcastDist = 0;
 
+            //Thrust
             if (ss.IncludeThrustInSignal && !Grid.IsStatic)
             {
                 double rawThrustOutput = 0.0d;
@@ -95,9 +114,10 @@ namespace ThrustBeacon
                         continue;
                     rawThrustOutput += thrustOutput / thrust.Value;
                 }
-                broadcastDist = (int)rawThrustOutput;
+                broadcastDist += (int)rawThrustOutput;
             }
 
+            //Power
             if (ss.IncludePowerInSignal)
             {
                 double rawPowerOutput = 0.0d;
@@ -108,6 +128,19 @@ namespace ThrustBeacon
                         continue;
                     rawPowerOutput += powerOutput / power.Value;
                 }
+                broadcastDist += (int)rawPowerOutput;
+            }
+
+            //WeaponHeat
+            if (ss.IncludeWeaponHeatInSignal)
+            {
+                double rawWepHeat = 0.0d;
+                foreach(var wep in weaponList)
+                {
+                    rawWepHeat += Session.wcAPI.GetHeatLevel(wep);
+                }
+                rawWepHeat /= ss.DefaultWeaponHeatDivisor;
+                broadcastDist += (int)rawWepHeat;
             }
 
             //Cooldown

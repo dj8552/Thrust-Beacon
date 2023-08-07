@@ -23,8 +23,8 @@ namespace ThrustBeacon
         internal bool Client;
         internal bool Server;
         internal bool MPActive;
-        static HudAPIv2 hudAPI;
-        WcApi wcAPI;
+        internal static HudAPIv2 hudAPI;
+        internal static WcApi wcAPI;
         public Networking Networking = new Networking(1337); //TODO: Pick a new number based on mod ID
         internal MyStringId symbol = MyStringId.GetOrCompute("FrameSignal");
         internal MyStringId symbolOffscreenArrow = MyStringId.GetOrCompute("ArrowOffset");
@@ -42,6 +42,7 @@ namespace ThrustBeacon
         private readonly ConcurrentCachingList<MyCubeBlock> _startBlocks = new ConcurrentCachingList<MyCubeBlock>();
         private readonly ConcurrentCachingList<MyCubeGrid> _startGrids = new ConcurrentCachingList<MyCubeGrid>();
         internal readonly List<GridComp> GridList = new List<GridComp>();
+        internal static readonly List<MyStringHash> weaponSubtypeIDs = new List<MyStringHash>();
         internal readonly ConcurrentDictionary<IMyCubeGrid, GridComp> GridMap = new ConcurrentDictionary<IMyCubeGrid, GridComp>();
         internal static readonly Dictionary<string, int> SignalProducer = new Dictionary<string, int>();
         internal readonly Dictionary<string, BlockConfig> BlockConfigs = new Dictionary<string, BlockConfig>();
@@ -108,6 +109,7 @@ namespace ThrustBeacon
             GridMap.Clear();
             BlockConfigs.Clear();
             SignalProducer.Clear();
+            weaponSubtypeIDs.Clear();
 
         }
         private void OnEntityCreate(MyEntity entity)

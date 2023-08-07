@@ -29,21 +29,28 @@ namespace ThrustBeacon
             MPActive = MyAPIGateway.Multiplayer.MultiplayerActive;
             Server = (MyAPIGateway.Multiplayer.MultiplayerActive && MyAPIGateway.Multiplayer.IsServer) || !MPActive;
             Client = (MyAPIGateway.Multiplayer.MultiplayerActive && !MyAPIGateway.Multiplayer.IsServer) || !MPActive;
+            if (Client)
+            {
+                InitConfig();
+                hudAPI = new HudAPIv2(InitMenu);
+                viewDist = Math.Min(Session.SessionSettings.SyncDistance, Session.SessionSettings.ViewDistance);
+            }
+            wcAPI = new WcApi();
+            wcAPI.Load();
             if (Server)
             {
                 MyEntities.OnEntityCreate += OnEntityCreate;
                 LoadSignalProducerConfigs();
                 LoadBlockConfigs();
                 InitServerConfig();
+                List<VRage.Game.MyDefinitionId> tempWeaponDefs = new List<VRage.Game.MyDefinitionId>();
+                wcAPI.GetAllCoreWeapons(tempWeaponDefs);
+                foreach (var def in tempWeaponDefs)
+                {
+                    weaponSubtypeIDs.Add(def.SubtypeId);                  
+                }
             }
-            if (Client)
-            {
-                InitConfig();
-                hudAPI = new HudAPIv2(InitMenu);
-                wcAPI = new WcApi();
-                wcAPI.Load();
-                viewDist = Math.Min(Session.SessionSettings.SyncDistance, Session.SessionSettings.ViewDistance);
-            }
+
         }
 
 
