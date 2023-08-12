@@ -222,7 +222,7 @@ namespace ThrustBeacon
 
         public override void Draw()
         {
-            if (Client && hudAPI.Heartbeat && SignalList.Count > 0)
+            if (Client && hudAPI.Heartbeat && SignalList.Count > 0 && MyAPIGateway.Session.Config.HudState != 0)
             {
                 var s = Settings.Instance;
                 var viewProjectionMat = Session.Camera.ViewMatrix * Session.Camera.ProjectionMatrix;

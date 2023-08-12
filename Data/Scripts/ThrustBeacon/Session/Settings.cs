@@ -104,7 +104,7 @@ namespace ThrustBeacon
 
             SymbolSize = new HudAPIv2.MenuTextInput("Adjust Symbol Size >>", SettingsMenu, "Adjust Symbol Size - Default is 0.04", AdjSymbolSize);
             TextSize = new HudAPIv2.MenuTextInput("Adjust Label Text Size >>", SettingsMenu, "Adjust Label Text Size - Default is 1", AdjLabelSize);
-            OwnTextSize = new HudAPIv2.MenuTextInput("Adjust Broadcast Info Size >>", SettingsMenu, "Adjust Broadcast Info Size - Default is 1", AdjLabelSize);
+            OwnTextSize = new HudAPIv2.MenuTextInput("Adjust Broadcast Info Size >>", SettingsMenu, "Adjust Broadcast Info Size - Default is 1", AdjOwnLabelSize);
             MoveSignalDisplay = new HudAPIv2.MenuSubCategory("Move Broadcast Info Location >>", SettingsMenu, "Broadcast Info Location");
                 MoveLeft = new HudAPIv2.MenuItem("Move Left", MoveSignalDisplay, LeftMove);
                 MoveRight = new HudAPIv2.MenuItem("Move Right", MoveSignalDisplay, RightMove);
@@ -155,6 +155,9 @@ namespace ThrustBeacon
             if (!float.TryParse(obj, out getter))
                 return;
             Settings.Instance.symbolWidth = getter;
+            symbolHeight = Settings.Instance.symbolWidth * aspectRatio;
+            Settings.Instance.offscreenWidth = getter + 0.02f;
+            offscreenHeight = Settings.Instance.offscreenWidth * aspectRatio;
         }
 
         private void AdjLabelSize(string obj)
