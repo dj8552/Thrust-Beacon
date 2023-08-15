@@ -104,6 +104,7 @@ namespace ThrustBeacon
                         {
                             var signalData = new SignalComp();
                             signalData.position = (Vector3I)gridPos;
+                            //signalData.range = grid.broadcastDist; //Temp used in alternate display
                             signalData.range = playerGrid ? grid.broadcastDist : (int)Math.Sqrt(distToTargSqr);
                             signalData.faction = grid.faction;
                             signalData.entityID = grid.Grid.EntityId;
@@ -166,7 +167,7 @@ namespace ThrustBeacon
                 {
 
                     var temp1 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "Mover (won't fade for a real one)", range = 1234, position = new Vector3I(1000, 2000, 3000), entityID = 123, sizeEnum = 3, relation = 0 }, Tick);
-                    var temp2 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "Lost Signal", range = 4567000, position = new Vector3I(11000, 2000, 3000), entityID = 456, sizeEnum = 2, relation = 1 }, Tick);
+                    var temp2 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "LAC.", range = 456700, position = new Vector3I(11000, 2000, 3000), entityID = 456, sizeEnum = 2, relation = 1 }, Tick);
                     SignalList.TryAdd(0, temp1);
                     SignalList.TryAdd(1, temp2);
                 }
@@ -242,16 +243,17 @@ namespace ThrustBeacon
                     else
                     {
                         var contactAge = Tick - signal.Value.Item2;
-                        if (contactAge >= s.maxContactAge)
+                        if (contactAge >= stopDisplayTimeTicks)
                         {
-                            SignalList.Remove(signal.Key);
+                            if(contactAge >= keepTimeTicks)
+                                SignalList.Remove(signal.Key);
                             continue;
                         }
                         var baseColor = contact.relation == 1 ? s.enemyColor : contact.relation == 3 ? s.friendColor : s.neutralColor;
                         var adjColor = baseColor;
-                        if (s.fadeOutTime > 0)
+                        if (fadeTimeTicks > 0)
                         {
-                            byte colorFade = (byte)(contactAge < s.fadeOutTime ? 0 : (contactAge - s.fadeOutTime) / 2);
+                            byte colorFade = (byte)(contactAge < fadeTimeTicks ? 0 : (contactAge - fadeTimeTicks) / 2);
                             adjColor.R = (byte)MathHelper.Clamp(baseColor.R - colorFade, 0, 255);
                             adjColor.G = (byte)MathHelper.Clamp(baseColor.G - colorFade, 0, 255);
                             adjColor.B = (byte)MathHelper.Clamp(baseColor.B - colorFade, 0, 255);
@@ -266,7 +268,9 @@ namespace ThrustBeacon
                             var symbolPosition = new Vector2D(screenCoords.X, screenCoords.Y);
                             var labelPosition = new Vector2D(screenCoords.X + (symbolHeight * 0.4), screenCoords.Y + (symbolHeight * 0.5));
                             float distance = Vector3.Distance(contact.position, camPos);
+                            var dispSize = contact.range > 1000 ? (contact.range / 1000).ToString("0.#") + " km" : contact.range.ToString("0.#") + " m";
                             var dispRange = distance > 1000 ? (distance / 1000).ToString("0.#") + " km" : distance.ToString("0.#") + " m";
+                            //var info = new StringBuilder(contact.faction + " " + dispSize + " sig " + "\n" + dispRange); //Testing alternate display
                             var info = new StringBuilder(contact.faction + messageList[contact.sizeEnum] + "\n" + dispRange);
                             var Label = new HudAPIv2.HUDMessage(info, labelPosition, new Vector2D(0, -0.001), 2, s.textSize, true, true);
                             Label.InitialColor = adjColor;

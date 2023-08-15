@@ -159,23 +159,23 @@ namespace ThrustBeacon
 
 
             //TODO roll these categories to server settings?
-            if (broadcastDist < 100)//Idle
+            if (broadcastDist < 2500)//Idle
             {
                 sizeEnum = 0;
             }
-            else if (broadcastDist < 8000)//Small
+            else if (broadcastDist < 100000)//Small
             {
                 sizeEnum = 1;
             }
-            else if (broadcastDist < 25000)//Medium
+            else if (broadcastDist < 200000)//Medium
             {
                 sizeEnum = 2;
             }
-            else if (broadcastDist < 100000)//Large
+            else if (broadcastDist < 300000)//Large
             {
                 sizeEnum = 3;
             }
-            else if (broadcastDist < 250000)//Huge
+            else if (broadcastDist < 400000)//Huge
             {
                 sizeEnum = 4;
             }

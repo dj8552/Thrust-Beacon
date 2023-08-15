@@ -53,7 +53,10 @@ namespace ThrustBeacon
         internal List<long> entityIDList = new List<long>();
         internal static List<GridComp> thrustshutdownList = new List<GridComp>();
         internal static List<GridComp> powershutdownList = new List<GridComp>();
-
+        internal static int fadeTimeTicks = 0;
+        internal static int stopDisplayTimeTicks = 0;
+        internal static int keepTimeTicks = 0;
+        internal static int newTimeTicks = 0;
 
         internal void StartComps()
         {
