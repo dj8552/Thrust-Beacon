@@ -48,6 +48,7 @@ namespace ThrustBeacon
         internal readonly Dictionary<string, BlockConfig> BlockConfigs = new Dictionary<string, BlockConfig>();
         internal List<IMyPlayer> PlayerList = new List<IMyPlayer>();
         internal static ConcurrentDictionary<long, MyTuple<SignalComp, int>> SignalList = new ConcurrentDictionary<long, MyTuple<SignalComp, int>>();
+        internal static ConcurrentDictionary<long, MyTuple<SignalComp, int>> NewSignalList = new ConcurrentDictionary<long, MyTuple<SignalComp, int>>();
         internal ICollection<MyTuple<MyEntity, float>> threatList = new List<MyTuple<MyEntity, float>>();
         internal ICollection<MyEntity> obsList = new List<MyEntity>();
         internal List<long> entityIDList = new List<long>();

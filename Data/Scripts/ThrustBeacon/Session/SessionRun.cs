@@ -230,6 +230,22 @@ namespace ThrustBeacon
                 var camPos = Session.Camera.Position;
                 var playerEnt = MyAPIGateway.Session?.Player?.Controller?.ControlledEntity?.Entity?.Parent?.EntityId;
 
+                foreach (var newSignal in NewSignalList.ToArray())
+                {
+                    var contact = newSignal.Value.Item1;
+                    if (contact.entityID == playerEnt) continue;
+                    var contactAge = Tick - newSignal.Value.Item2;
+
+                    if (contactAge >= newTimeTicks)
+                    {
+                        NewSignalList.Remove(newSignal.Key);
+                        continue;
+                    }
+                    
+                    //Newly discovered signal AV shenanigans go here
+                }
+
+
                 foreach (var signal in SignalList.ToArray())
                 {
                     var contact = signal.Value.Item1;
@@ -242,6 +258,7 @@ namespace ThrustBeacon
                     }
                     else
                     {
+                        if (NewSignalList.ContainsKey(contact.entityID)) continue;
                         var contactAge = Tick - signal.Value.Item2;
                         if (contactAge >= stopDisplayTimeTicks)
                         {
@@ -314,6 +331,7 @@ namespace ThrustBeacon
             PlayerList.Clear();
             GridList.Clear();
             SignalList.Clear();
+            NewSignalList.Clear();
             threatList.Clear();
             obsList.Clear();
             powershutdownList.Clear();
