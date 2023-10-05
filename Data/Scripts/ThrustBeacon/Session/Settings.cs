@@ -132,7 +132,7 @@ namespace ThrustBeacon
                 MoveDown = new HudAPIv2.MenuItem("Move Down", MoveSignalDisplay, DownMove);
                 MoveReset = new HudAPIv2.MenuItem("Reset Position", MoveSignalDisplay, ResetMove);
             Blank = new HudAPIv2.MenuItem("- - - - - - - - - - -", SettingsMenu, null);
-            NewTime = new HudAPIv2.MenuTextInput("Show new signal alert for " + Settings.Instance.newTime + " seconds", SettingsMenu, "Time to display new signal alert (in seconds)", NewTimeAdj);
+            //NewTime = new HudAPIv2.MenuTextInput("Show new signal alert for " + Settings.Instance.newTime + " seconds", SettingsMenu, "Time to display new signal alert (in seconds)", NewTimeAdj);
 
             FadeTime = new HudAPIv2.MenuTextInput("Fade out after " + Settings.Instance.fadeOutTime + " seconds", SettingsMenu, "Time to wait before fading out contact (in seconds)", FadeTimeAdj);
             StopDisplayTime = new HudAPIv2.MenuTextInput("Stop displaying after " + Settings.Instance.stopDisplayTime + " seconds", SettingsMenu, "Stop drawing contacts that have not updated (in seconds)", StopTimeAdj);

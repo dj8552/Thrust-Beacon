@@ -38,7 +38,7 @@ namespace Digi.Example_NetworkProtobuf
                 else
                 {
                     Session.SignalList.TryAdd(signalRcvd.entityID, new MyTuple<SignalComp, int>(signalRcvd, Session.Tick));
-                    Session.NewSignalList.TryAdd(signalRcvd.entityID, new MyTuple<SignalComp, int>(signalRcvd, Session.Tick));
+                    //Session.NewSignalList.TryAdd(signalRcvd.entityID, new MyTuple<SignalComp, int>(signalRcvd, Session.Tick));
                 }
             }
             return false;           
