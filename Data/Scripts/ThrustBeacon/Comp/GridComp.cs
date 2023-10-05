@@ -70,9 +70,6 @@ namespace ThrustBeacon
             {
                 weaponList.Add(block);
             }
-
-
-
         }
 
 
@@ -92,7 +89,7 @@ namespace ThrustBeacon
 
         internal void CalcSignal()
         {
-            if ((thrustList.Count == 0 && !powerShutdown) || (Grid.IsStatic && broadcastDist == 1)) //TODO sort out skipping for static grids too
+            if ((thrustList.Count == 0 && !powerShutdown) || (Grid.IsStatic && broadcastDist == 1))
             {
                 broadcastDist = 0; //Zeroing these out so a grid that loses thrusters completely does not get a phantom signal locked to it
                 sizeEnum = 0;
@@ -154,10 +151,6 @@ namespace ThrustBeacon
                     broadcastDist = 1;
             }
 
-
-
-
-
             //TODO roll these categories to server settings?
             if (broadcastDist < 2500)//Idle
             {
@@ -204,9 +197,6 @@ namespace ThrustBeacon
                 else if (broadcastDist < ss.MaxSignalforThrusterShutdown && thrustShutdown)
                     Session.thrustshutdownList.Remove(this);
             }
-
-
-
 
             broadcastDistSqr = (long)broadcastDist * broadcastDist;
             return;

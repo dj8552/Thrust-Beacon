@@ -28,12 +28,12 @@ namespace ThrustBeacon
         private void LoadBlockConfigs()
         {
             var Filename = "BlockConfig.cfg";
-            var localFileExists = MyAPIGateway.Utilities.FileExistsInLocalStorage(Filename, typeof(BlockConfig));
+            var localFileExists = MyAPIGateway.Utilities.FileExistsInLocalStorage(Filename, typeof(BlockConfigDict));
             if (localFileExists)
             {
                 var configListTemp = new List<BlockConfig>();
-                TextReader reader = MyAPIGateway.Utilities.ReadFileInLocalStorage(Filename, typeof(BlockConfig));
-                string text = reader.ReadToEnd();
+                TextReader reader = MyAPIGateway.Utilities.ReadFileInLocalStorage(Filename, typeof(BlockConfigDict));
+                configListTemp = MyAPIGateway.Utilities.SerializeFromXML<List<BlockConfig>>(reader.ReadToEnd()); 
                 reader.Close();
                 foreach (var temp in configListTemp)
                     BlockConfigs.Add(temp.subTypeID, temp);

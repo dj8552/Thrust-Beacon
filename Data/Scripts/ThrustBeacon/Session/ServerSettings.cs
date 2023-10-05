@@ -19,8 +19,8 @@ namespace ThrustBeacon
             DefaultPowerDivisor = 600,
             IncludeThrustInSignal = true,
             DefaultThrustDivisor = 600,
-            LargeGridCooldownRate = 0.95,
-            SmallGridCooldownRate = 0.85,
+            LargeGridCooldownRate = 0.95, //Previous signal is multiplied by this per 59 tick cycle (unless freshly calc'd value is > than old value)
+            SmallGridCooldownRate = 0.85, //Same as above
             ShutdownPowerOverMaxSignal = true,
             MaxSignalforPowerShutdown = 500000,
             ShutdownThrustersOverMaxSignal = true,
@@ -67,10 +67,6 @@ namespace ThrustBeacon
         
         [ProtoMember(12)]
         public double DefaultWeaponHeatDivisor { get; set; }
-
-
-
-
     }
     public partial class Session
     {

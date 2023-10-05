@@ -104,11 +104,11 @@ namespace ThrustBeacon
                         {
                             var signalData = new SignalComp();
                             signalData.position = (Vector3I)gridPos;
-                            //signalData.range = grid.broadcastDist; //Temp used in alternate display
                             signalData.range = playerGrid ? grid.broadcastDist : (int)Math.Sqrt(distToTargSqr);
                             signalData.faction = grid.faction;
                             signalData.entityID = grid.Grid.EntityId;
                             signalData.sizeEnum = grid.sizeEnum;
+                            //signalData.accuracy = TODO calc this
                             if (false || playerFaction != null)
                             {
                                 var relation = MyAPIGateway.Session.Factions.GetRelationBetweenFactions(playerFaction.FactionId, grid.factionID);
@@ -206,7 +206,7 @@ namespace ThrustBeacon
         {
             int tickRate = 60;
             float minimumJitterCutoff = 0.25f;
-            float maxJitterAmount = 2000;
+            float maxJitterAmount = contact.accuracy;
 
             float distance = Vector3.Distance(contact.position, camPos);
             Random random = new Random((int)contact.entityID + (Tick / tickRate));
@@ -230,10 +230,15 @@ namespace ThrustBeacon
                 var camPos = Session.Camera.Position;
                 var playerEnt = MyAPIGateway.Session?.Player?.Controller?.ControlledEntity?.Entity?.Parent?.EntityId;
 
+                /*
                 foreach (var newSignal in NewSignalList.ToArray())
                 {
                     var contact = newSignal.Value.Item1;
-                    if (contact.entityID == playerEnt) continue;
+                    if (contact.entityID == playerEnt)
+                    {
+                        NewSignalList.Remove(newSignal.Key);
+                        continue;
+                    }
                     var contactAge = Tick - newSignal.Value.Item2;
 
                     if (contactAge >= newTimeTicks)
@@ -244,6 +249,7 @@ namespace ThrustBeacon
                     
                     //Newly discovered signal AV shenanigans go here
                 }
+                */
 
 
                 foreach (var signal in SignalList.ToArray())
@@ -258,7 +264,7 @@ namespace ThrustBeacon
                     }
                     else
                     {
-                        if (NewSignalList.ContainsKey(contact.entityID)) continue;
+                        //if (NewSignalList.ContainsKey(contact.entityID)) continue;
                         var contactAge = Tick - signal.Value.Item2;
                         if (contactAge >= stopDisplayTimeTicks)
                         {
