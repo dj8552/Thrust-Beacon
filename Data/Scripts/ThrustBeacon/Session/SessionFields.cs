@@ -73,7 +73,7 @@ namespace ThrustBeacon
                         continue;
 
                     var gridComp = _gridCompPool.Count > 0 ? _gridCompPool.Pop() : new GridComp();
-                    gridComp.Init(grid, this);
+                    gridComp.Init(grid);
 
                     GridList.Add(gridComp);
                     GridMap[grid] = gridComp;
@@ -102,7 +102,7 @@ namespace ThrustBeacon
                 }
                 _startBlocks.ClearImmediate();
             }
-            catch (Exception ex)
+            catch
             { }
         }
         private void Clean()

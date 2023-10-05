@@ -28,7 +28,7 @@ namespace ThrustBeacon
 
         internal bool specialsDirty = false;
         
-        internal void Init(MyCubeGrid grid, Session session)
+        internal void Init(MyCubeGrid grid)
         {
             Grid = grid;
             Grid.OnFatBlockAdded += FatBlockAdded;
@@ -133,7 +133,7 @@ namespace ThrustBeacon
             foreach (var special in specials)
             {
                 var func = special as IMyFunctionalBlock;
-                var active = func != null ? func.Enabled : true;
+                var active = func == null || func.Enabled;
                 if (!active) continue;
                 var cfg = Session.BlockConfigs[special.BlockDefinition.Id.SubtypeId];
                 coolDownRate += cfg.SignalCooldown;

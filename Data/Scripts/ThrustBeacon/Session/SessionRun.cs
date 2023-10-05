@@ -96,7 +96,7 @@ namespace ThrustBeacon
                     GridComp playerComp = null;
                     var playerGridDetectionMod = 0f;
                     var playerGridAccuracyMod = 0f;
-                    if(block != null && GridListSpecials.TryGetValue(block.CubeGrid, out playerComp));
+                    if (block != null && GridListSpecials.TryGetValue(block.CubeGrid, out playerComp))
                     {
                         playerGridDetectionMod = playerComp.detectionRange;
                         playerGridAccuracyMod = playerComp.detectionAccuracy;
@@ -204,11 +204,11 @@ namespace ThrustBeacon
 
         }
 
+        //TODO tie in accuracy to jitter
         public float ComputeSignalStrength(SignalComp contact, float distance)
         {
             float maxJitterDistance = 400000f;
             float f = distance / maxJitterDistance;
-            // TODO - Add in a way to calculate signal strength, and boost it if the piloted grid has antenna(s)/tech (this should probably be server side)
             return 1.0f - Math.Min(f, 1.0f);
         }
 

@@ -49,9 +49,8 @@ namespace ThrustBeacon
             var localFileExists = MyAPIGateway.Utilities.FileExistsInLocalStorage(Filename, typeof(BlockConfigDict));
             if (localFileExists)
             {
-                var configListTemp = new List<BlockConfig>();
                 TextReader reader = MyAPIGateway.Utilities.ReadFileInLocalStorage(Filename, typeof(BlockConfigDict));
-                configListTemp = MyAPIGateway.Utilities.SerializeFromXML<List<BlockConfig>>(reader.ReadToEnd()); 
+                var configListTemp = MyAPIGateway.Utilities.SerializeFromXML<List<BlockConfig>>(reader.ReadToEnd()); 
                 reader.Close();
                 foreach (var temp in configListTemp)
                     BlockConfigs.Add(MyStringHash.GetOrCompute(temp.subTypeID), temp);
@@ -84,14 +83,14 @@ namespace ThrustBeacon
         }
     }
 
-    public class ThrusterConfigDict
+    public class SignalProducerCfgDict
     {
         [ProtoMember(1)]
         public SerializableDictionary<string, int> cfg { get; set; }
     }
 
     [ProtoContract]
-    public class ThrusterConfig
+    public class ProducerConfig
     {
         [ProtoMember(1)]
         public string subTypeID { get; set; }
@@ -104,22 +103,21 @@ namespace ThrustBeacon
         private void LoadSignalProducerConfigs()
         {
             var Filename = "SignalProducerConfig.cfg";
-            var localFileExists = MyAPIGateway.Utilities.FileExistsInLocalStorage(Filename, typeof(ThrusterConfig));
+            var localFileExists = MyAPIGateway.Utilities.FileExistsInLocalStorage(Filename, typeof(ProducerConfig));
             if (localFileExists)
             {
-                var configListTemp = new List<ThrusterConfig>();
-                TextReader reader = MyAPIGateway.Utilities.ReadFileInLocalStorage(Filename, typeof(ThrusterConfig));
-                string text = reader.ReadToEnd();
+                TextReader reader = MyAPIGateway.Utilities.ReadFileInLocalStorage(Filename, typeof(ProducerConfig));
+                var configListTemp = MyAPIGateway.Utilities.SerializeFromXML<List<ProducerConfig>>(reader.ReadToEnd());
                 reader.Close();
                 foreach (var temp in configListTemp)
                     SignalProducer.Add(temp.subTypeID, temp.divisor);
             }
             else
             {
-                WriteThrusterDefaults();
+                WriteProducerDefaults();
             }
         }
-        public void WriteThrusterDefaults()
+        public void WriteProducerDefaults()
         {
             var Filename = "ThrusterConfig.cfg";
             var sampleMap = new Dictionary<string, int>()           
@@ -148,7 +146,7 @@ namespace ThrustBeacon
                 { "SmallBlockSmallGenerator", 12345}
 
             };
-            var tempCfg = new ThrusterConfigDict();
+            var tempCfg = new SignalProducerCfgDict();
             tempCfg.cfg = new SerializableDictionary<string, int>();
             foreach (var temp in sampleMap)
             {
@@ -157,7 +155,7 @@ namespace ThrustBeacon
             }
 
             TextWriter writer;
-            writer = MyAPIGateway.Utilities.WriteFileInWorldStorage(Filename, typeof(ThrusterConfigDict));
+            writer = MyAPIGateway.Utilities.WriteFileInWorldStorage(Filename, typeof(SignalProducerCfgDict));
             writer.Write(MyAPIGateway.Utilities.SerializeToXML(tempCfg));
             writer.Close();
         }
