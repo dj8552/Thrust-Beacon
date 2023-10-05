@@ -171,7 +171,7 @@ namespace ThrustBeacon
                             SignalList.Remove(wcContact);
                     }
                 }
-
+                /*
                 //temp sample points
                 if (Tick % 600 == 0 && !SignalList.ContainsKey(0) && !SignalList.ContainsKey(1))
                 {
@@ -188,6 +188,7 @@ namespace ThrustBeacon
                 //temp moving point for positional update tests
                 if (SignalList.ContainsKey(0)) SignalList[0].Item1.position += new Vector3I(100, 0, 0);
                 //end of temp sample points
+                */
             }
 
 
@@ -233,7 +234,7 @@ namespace ThrustBeacon
 
         public override void Draw()
         {
-            if (Client && hudAPI.Heartbeat && SignalList.Count > 0 && MyAPIGateway.Session.Config.HudState != 0)
+            if (Client && hudAPI.Heartbeat && SignalList.Count > 0 && MyAPIGateway.Session.Config.HudState != 0 && !MyAPIGateway.Gui.IsCursorVisible)
             {
                 var s = Settings.Instance;
                 var viewProjectionMat = Session.Camera.ViewMatrix * Session.Camera.ProjectionMatrix;
