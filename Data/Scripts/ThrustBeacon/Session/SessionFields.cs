@@ -42,10 +42,11 @@ namespace ThrustBeacon
         private readonly ConcurrentCachingList<MyCubeBlock> _startBlocks = new ConcurrentCachingList<MyCubeBlock>();
         private readonly ConcurrentCachingList<MyCubeGrid> _startGrids = new ConcurrentCachingList<MyCubeGrid>();
         internal readonly List<GridComp> GridList = new List<GridComp>();
+        internal static readonly Dictionary<IMyCubeGrid,GridComp> GridListSpecials = new Dictionary<IMyCubeGrid, GridComp>();
         internal static readonly List<MyStringHash> weaponSubtypeIDs = new List<MyStringHash>();
         internal readonly ConcurrentDictionary<IMyCubeGrid, GridComp> GridMap = new ConcurrentDictionary<IMyCubeGrid, GridComp>();
         internal static readonly Dictionary<string, int> SignalProducer = new Dictionary<string, int>();
-        internal readonly Dictionary<string, BlockConfig> BlockConfigs = new Dictionary<string, BlockConfig>();
+        internal static readonly Dictionary<MyStringHash, BlockConfig> BlockConfigs = new Dictionary<MyStringHash, BlockConfig>();
         internal List<IMyPlayer> PlayerList = new List<IMyPlayer>();
         internal static ConcurrentDictionary<long, MyTuple<SignalComp, int>> SignalList = new ConcurrentDictionary<long, MyTuple<SignalComp, int>>();
         internal static ConcurrentDictionary<long, MyTuple<SignalComp, int>> NewSignalList = new ConcurrentDictionary<long, MyTuple<SignalComp, int>>();
@@ -114,7 +115,7 @@ namespace ThrustBeacon
             BlockConfigs.Clear();
             SignalProducer.Clear();
             weaponSubtypeIDs.Clear();
-
+            GridListSpecials.Clear();
         }
         private void OnEntityCreate(MyEntity entity)
         {

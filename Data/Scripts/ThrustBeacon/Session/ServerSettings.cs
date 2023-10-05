@@ -19,17 +19,14 @@ namespace ThrustBeacon
             DefaultPowerDivisor = 600,
             IncludeThrustInSignal = true,
             DefaultThrustDivisor = 600,
-            LargeGridCooldownRate = 0.95, //Previous signal is multiplied by this per 59 tick cycle (unless freshly calc'd value is > than old value)
-            SmallGridCooldownRate = 0.85, //Same as above
+            LargeGridCooldownRate = 0.95f, //Previous signal is multiplied by this per 59 tick cycle (unless freshly calc'd value is > than old value)
+            SmallGridCooldownRate = 0.85f, //Same as above
             ShutdownPowerOverMaxSignal = true,
             MaxSignalforPowerShutdown = 500000,
             ShutdownThrustersOverMaxSignal = true,
             MaxSignalforThrusterShutdown = 500000,
             IncludeWeaponHeatInSignal = true,
             DefaultWeaponHeatDivisor = 1, //Explore further and find a good starting point for this value
-
-
-
         };
 
         [ProtoMember(1)]
@@ -45,10 +42,10 @@ namespace ThrustBeacon
         public int DefaultThrustDivisor { get; set; }
 
         [ProtoMember(5)]
-        public double LargeGridCooldownRate { get; set; }
+        public float LargeGridCooldownRate { get; set; }
 
         [ProtoMember(6)]
-        public double SmallGridCooldownRate { get; set; }
+        public float SmallGridCooldownRate { get; set; }
 
         [ProtoMember(7)]
         public bool ShutdownPowerOverMaxSignal { get; set; }

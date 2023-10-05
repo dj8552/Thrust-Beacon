@@ -7,6 +7,7 @@ using System.IO;
 using VRage.Utils;
 using VRageMath;
 using VRage.Serialization;
+using System.ComponentModel;
 
 namespace ThrustBeacon
 {
@@ -21,7 +22,24 @@ namespace ThrustBeacon
     public class BlockConfig //TODO flesh out all the options for blocks to modify signals (accuracy, detection range boost, stealth, faster cooldown, etc)
     {
         [ProtoMember(1)]
-        public string subTypeID { get; set; }
+        public string subTypeID { get; set; }//Block subtypeID.  Can be a passive or functional block.  Functional blocks will be checked if enabled for any bonuses/effects
+
+        [ProtoMember(2)]
+        [DefaultValue(0)]
+        public float SignalCooldown { get; set; }//Additive to cooldown mult.  For ex -0.05f would make a grid cooldown faster
+
+        [ProtoMember(3)]
+        [DefaultValue(0)]
+        public float SignalRange { get; set; }//Meters- Positive to make this grid detectable further, negative to decrease distance for being detected.
+
+        [ProtoMember(4)]
+        [DefaultValue(0)]
+        public float DetectionRange { get; set; }//Meters- Positive to make detection of others possible at higher dist
+
+        [ProtoMember(5)]
+        [DefaultValue(0)]
+        public float DetectionAccuracy { get; set; }
+
     }
     public partial class Session
     {
@@ -36,7 +54,7 @@ namespace ThrustBeacon
                 configListTemp = MyAPIGateway.Utilities.SerializeFromXML<List<BlockConfig>>(reader.ReadToEnd()); 
                 reader.Close();
                 foreach (var temp in configListTemp)
-                    BlockConfigs.Add(temp.subTypeID, temp);
+                    BlockConfigs.Add(MyStringHash.GetOrCompute(temp.subTypeID), temp);
             }
             else
             {
@@ -49,12 +67,15 @@ namespace ThrustBeacon
             var tempCfg = new BlockConfigDict();
             tempCfg.cfg = new SerializableDictionary<string, BlockConfig>();
 
-
             var sample1 = new BlockConfig();
             sample1.subTypeID = "test";
+            sample1.SignalRange = 100;
+            sample1.DetectionRange = 200;
+            sample1.DetectionAccuracy = 1;
+            sample1.SignalCooldown = 1;
 
             tempCfg.cfg.Dictionary.Add(sample1.subTypeID, sample1);
-            BlockConfigs.Add(sample1.subTypeID, sample1);
+            BlockConfigs.Add(MyStringHash.GetOrCompute(sample1.subTypeID), sample1);
 
             TextWriter writer;
             writer = MyAPIGateway.Utilities.WriteFileInWorldStorage(Filename, typeof(BlockConfigDict));

@@ -69,8 +69,7 @@ namespace ThrustBeacon
             {
                 foreach (var gridComp in GridList)
                 {
-                    if (gridComp.thrustList.Count > 0)
-                        gridComp.CalcSignal();//TODO: See if there's a better way to account for pulsing/blipping the gas
+                    gridComp.CalcSignal();//TODO: See if there's a better way to account for pulsing/blipping the gas
                 }
                 //Find player controlled entities in range and broadcast to them
                 PlayerList.Clear();
@@ -91,16 +90,27 @@ namespace ThrustBeacon
                         MyLog.Default.WriteLineAndConsole($"Player position error - Vector3D.Zero - player.Name: {player.DisplayName} - player.SteamUserId: {player.SteamUserId}");
                         continue;
                     }
+
                     var controlledEnt = player.Controller?.ControlledEntity?.Entity?.Parent?.EntityId;
+                    var block = player.Controller?.ControlledEntity?.Entity as IMyCubeBlock;
+                    GridComp playerComp = null;
+                    var playerGridDetectionMod = 0f;
+                    var playerGridAccuracyMod = 0f;
+                    if(block != null && GridListSpecials.TryGetValue(block.CubeGrid, out playerComp));
+                    {
+                        playerGridDetectionMod = playerComp.detectionRange;
+                        playerGridAccuracyMod = playerComp.detectionAccuracy;
+                    }
+
                     var playerFaction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(player.IdentityId);
                     var tempList = new List<SignalComp>();
                     foreach (var grid in GridList)
                     {
                         var playerGrid = grid.Grid.EntityId == controlledEnt;
-                        if (!playerGrid && grid.broadcastDist == 0) continue;
+                        if (!playerGrid && grid.broadcastDist < 2) continue;
                         var gridPos = grid.Grid.PositionComp.WorldAABB.Center;
                         var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
-                        if (playerGrid || distToTargSqr <= grid.broadcastDistSqr)
+                        if (playerGrid || distToTargSqr <= grid.broadcastDistSqr + playerGridDetectionMod)
                         {
                             var signalData = new SignalComp();
                             signalData.position = (Vector3I)gridPos;

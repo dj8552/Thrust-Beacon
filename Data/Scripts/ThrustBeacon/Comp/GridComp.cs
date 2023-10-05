@@ -12,9 +12,8 @@ namespace ThrustBeacon
         internal Dictionary<IMyThrust, int> thrustList = new Dictionary<IMyThrust, int>();
         internal Dictionary<IMyPowerProducer, int> powerList = new Dictionary<IMyPowerProducer, int>();
         internal List<MyEntity> weaponList = new List<MyEntity>();
+        internal List<MyCubeBlock> specials = new List<MyCubeBlock>();
 
-        internal bool powerShutdown = false;
-        internal bool thrustShutdown = false;
         internal int broadcastDist;
         internal int broadcastDistOld;
         internal long broadcastDistSqr;
@@ -22,12 +21,24 @@ namespace ThrustBeacon
         internal long factionID = 0;
         internal VRage.Game.MyCubeSize gridSize;
         internal byte sizeEnum;
+        internal float coolDownRate = 0f;
+        internal float signalRange = 0f;
+        internal float detectionRange = 0f;
+        internal float detectionAccuracy = 0f;
+
+        internal bool specialsDirty = false;
+        
         internal void Init(MyCubeGrid grid, Session session)
         {
             Grid = grid;
             Grid.OnFatBlockAdded += FatBlockAdded;
             Grid.OnFatBlockRemoved += FatBlockRemoved;
             gridSize = Grid.GridSizeEnum;
+            if (gridSize == 0)
+                coolDownRate = ServerSettings.Instance.LargeGridCooldownRate;
+            else
+                coolDownRate = ServerSettings.Instance.SmallGridCooldownRate;
+            RecalcSpecials();
         }
 
         internal void FatBlockAdded(MyCubeBlock block)
@@ -70,8 +81,22 @@ namespace ThrustBeacon
             {
                 weaponList.Add(block);
             }
+
+            if (Session.BlockConfigs.ContainsKey(subTypeID))
+            {
+                specialsDirty = true;
+                specials.Add(block);
+                var func = block as IMyFunctionalBlock;
+                if (func != null)
+                    func.EnabledChanged += Func_EnabledChanged;                  
+            }
+
         }
 
+        private void Func_EnabledChanged(IMyTerminalBlock obj)
+        {
+            specialsDirty = true;
+        }
 
         internal void FatBlockRemoved(MyCubeBlock block)
         {
@@ -85,20 +110,69 @@ namespace ThrustBeacon
                 powerList.Remove(power);
             else if (weapon)
                 weaponList.Remove(block);
+            if (Session.BlockConfigs.ContainsKey(block.BlockDefinition.Id.SubtypeId))
+            {
+                specialsDirty = true;
+                specials.Remove(block);
+                var func = block as IMyFunctionalBlock;
+                if (func != null)
+                    func.EnabledChanged -= Func_EnabledChanged;
+            }
+        }
+
+        internal void RecalcSpecials()
+        {
+            if (gridSize == 0)
+                coolDownRate = ServerSettings.Instance.LargeGridCooldownRate;
+            else
+                coolDownRate = ServerSettings.Instance.SmallGridCooldownRate;
+            detectionAccuracy = 0;
+            detectionRange = 0;
+            signalRange = 0;
+
+            foreach (var special in specials)
+            {
+                var func = special as IMyFunctionalBlock;
+                var active = func != null ? func.Enabled : true;
+                if (!active) continue;
+                var cfg = Session.BlockConfigs[special.BlockDefinition.Id.SubtypeId];
+                coolDownRate += cfg.SignalCooldown;
+                detectionAccuracy += cfg.DetectionAccuracy;
+                detectionRange += cfg.DetectionRange;
+                signalRange += cfg.SignalRange;
+            }
+
+            if(specials.Count > 0)
+            {
+                if (!Session.GridListSpecials.ContainsKey(Grid))
+                    Session.GridListSpecials.Add(Grid, this);
+                else
+                    Session.GridListSpecials[Grid] = this;
+            }
+            else
+            {
+                Session.GridListSpecials.Remove(Grid);
+            }
+
+            specialsDirty = false;
         }
 
         internal void CalcSignal()
         {
-            if ((thrustList.Count == 0 && !powerShutdown) || (Grid.IsStatic && broadcastDist == 1))
+            var ss = ServerSettings.Instance;
+
+            if (Grid.IsStatic && broadcastDist == 1)
             {
-                broadcastDist = 0; //Zeroing these out so a grid that loses thrusters completely does not get a phantom signal locked to it
+                broadcastDist = 1;
                 sizeEnum = 0;
                 return;
             }
-            var ss = ServerSettings.Instance;
 
             broadcastDistOld = broadcastDist;
             broadcastDist = 0;
+
+            if (specialsDirty)
+                RecalcSpecials();
 
             //Thrust
             if (ss.IncludeThrustInSignal && !Grid.IsStatic)
@@ -143,13 +217,13 @@ namespace ThrustBeacon
             //Cooldown
             if (broadcastDistOld > broadcastDist || Grid.IsStatic)
             {
-                if (gridSize == 0)
-                    broadcastDist = (int)(broadcastDistOld * ss.LargeGridCooldownRate);
-                else
-                    broadcastDist = (int)(broadcastDistOld * ss.SmallGridCooldownRate);
+                broadcastDist = (int)(broadcastDistOld * coolDownRate);
                 if (broadcastDist <= 1)
                     broadcastDist = 1;
             }
+
+            //SignalRange increase from specials
+            broadcastDist += (int)signalRange;
 
             //TODO roll these categories to server settings?
             if (broadcastDist < 2500)//Idle
@@ -177,25 +251,30 @@ namespace ThrustBeacon
                 sizeEnum = 5;
             }
 
-            if (ss.ShutdownPowerOverMaxSignal)//TODO set up shutdown reason enum and a singular list
+            if (ss.ShutdownPowerOverMaxSignal)
             {
-                if (broadcastDist >= ss.MaxSignalforPowerShutdown && !powerShutdown)
+                if (broadcastDist >= ss.MaxSignalforPowerShutdown)
                 {
                     sizeEnum = 6;
                     Session.powershutdownList.Add(this);
                 }
-                else if (broadcastDist < ss.MaxSignalforPowerShutdown && powerShutdown)
+                else if (broadcastDist < ss.MaxSignalforPowerShutdown)
+                {
                     Session.powershutdownList.Remove(this);
+                }
+
             }
             if (ss.ShutdownThrustersOverMaxSignal)
             {
-                if (broadcastDist >= ss.MaxSignalforThrusterShutdown && !thrustShutdown)
+                if (broadcastDist >= ss.MaxSignalforThrusterShutdown)
                 {
                     sizeEnum = 6;
                     Session.thrustshutdownList.Add(this);
                 }
-                else if (broadcastDist < ss.MaxSignalforThrusterShutdown && thrustShutdown)
+                else if (broadcastDist < ss.MaxSignalforThrusterShutdown)
+                {
                     Session.thrustshutdownList.Remove(this);
+                }
             }
 
             broadcastDistSqr = (long)broadcastDist * broadcastDist;
@@ -222,6 +301,15 @@ namespace ThrustBeacon
             Grid = null;
             thrustList.Clear();
             powerList.Clear();
+
+            foreach(var s in specials)
+            {
+                var func = s as IMyFunctionalBlock;
+                if (func != null)
+                    func.EnabledChanged -= Func_EnabledChanged;
+            }
+
+            specials.Clear();
             broadcastDist = 0;
             broadcastDistSqr = 0;
         }
