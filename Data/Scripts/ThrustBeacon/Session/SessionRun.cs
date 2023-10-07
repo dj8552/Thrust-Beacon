@@ -23,6 +23,8 @@ namespace ThrustBeacon
         public override void BeforeStart()
         {
             Networking.Register();
+            if(Client)
+                MyAPIGateway.Session.Player.Controller.ControlledEntityChanged += GridChange;
         }
         public override void LoadData()
         {
@@ -53,7 +55,13 @@ namespace ThrustBeacon
 
         }
 
-
+        private void GridChange(VRage.Game.ModAPI.Interfaces.IMyControllableEntity previousEnt, VRage.Game.ModAPI.Interfaces.IMyControllableEntity newEnt)
+        {
+            if (newEnt is IMyCharacter)
+            {
+                SignalList.Clear();
+            }
+        }
 
         public override void UpdateBeforeSimulation()
         {
@@ -67,6 +75,8 @@ namespace ThrustBeacon
             Tick++;
             if (Server && Tick % 60 == 0)
             {
+                if ((!_startBlocks.IsEmpty || !_startGrids.IsEmpty))
+                    StartComps();
                 foreach (var gridComp in GridList)
                 {
                     gridComp.CalcSignal();//TODO: See if there's a better way to account for pulsing/blipping the gas
@@ -81,9 +91,10 @@ namespace ThrustBeacon
 
                 foreach (var player in PlayerList)
                 {
-                    if (player == null || player.Character == null || (MPActive && player.SteamUserId == 0))
-                        continue; 
-
+                    if (player == null || player.Character == null || (MPActive && player.SteamUserId == 0) || (!ServerSettings.Instance.SendSignalDataToSuits && player.Controller.ControlledEntity is IMyCharacter))
+                    {
+                        continue;
+                    }
                     var playerPos = player.Character.WorldAABB.Center;
                     if (playerPos == Vector3D.Zero)
                     {
@@ -94,11 +105,11 @@ namespace ThrustBeacon
                     var controlledEnt = player.Controller?.ControlledEntity?.Entity?.Parent?.EntityId;
                     var block = player.Controller?.ControlledEntity?.Entity as IMyCubeBlock;
                     GridComp playerComp = null;
-                    var playerGridDetectionMod = 0f;
+                    var playerGridDetectionModSqr = 0f;
                     var playerGridAccuracyMod = 0f;
                     if (block != null && GridListSpecials.TryGetValue(block.CubeGrid, out playerComp))
                     {
-                        playerGridDetectionMod = playerComp.detectionRange;
+                        playerGridDetectionModSqr = playerComp.detectionRange * playerComp.detectionRange;
                         playerGridAccuracyMod = playerComp.detectionAccuracy;
                     }
 
@@ -110,7 +121,7 @@ namespace ThrustBeacon
                         if (!playerGrid && grid.broadcastDist < 2) continue;
                         var gridPos = grid.Grid.PositionComp.WorldAABB.Center;
                         var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
-                        if (playerGrid || distToTargSqr <= grid.broadcastDistSqr + playerGridDetectionMod)
+                        if (playerGrid || distToTargSqr <= grid.broadcastDistSqr + playerGridDetectionModSqr)
                         {
                             var signalData = new SignalComp();
                             signalData.position = (Vector3I)gridPos;
@@ -119,7 +130,7 @@ namespace ThrustBeacon
                             signalData.entityID = grid.Grid.EntityId;
                             signalData.sizeEnum = grid.sizeEnum;
                             //signalData.accuracy = TODO calc this
-                            if (false || playerFaction != null)
+                            if (!playerGrid && playerFaction != null)
                             {
                                 var relation = MyAPIGateway.Session.Factions.GetRelationBetweenFactions(playerFaction.FactionId, grid.factionID);
                                 signalData.relation = (byte)relation;
@@ -143,16 +154,15 @@ namespace ThrustBeacon
                     if (MPActive && tempList.Count > 0)
                         Networking.SendToPlayer(new PacketBase(tempList), player.SteamUserId);
                 }
-                if ((!_startBlocks.IsEmpty || !_startGrids.IsEmpty))
-                    StartComps();
+
             }
 
             //Clientside list processing
-            if (Client && Tick % 60 == 0)
+            if (Client && Tick % 59 == 0 && Settings.Instance.hideWC)
             {
                 entityIDList.Clear();
                 var controlledEnt = MyAPIGateway.Session?.Player?.Controller?.ControlledEntity?.Entity?.Parent;
-                if (controlledEnt != null && controlledEnt is MyCubeGrid)//WC Deconflict
+                if (controlledEnt != null && controlledEnt is MyCubeGrid)
                 {
                     var myEnt = (MyEntity)controlledEnt;
                     wcAPI.GetSortedThreats(myEnt, threatList);
@@ -171,24 +181,6 @@ namespace ThrustBeacon
                             SignalList.Remove(wcContact);
                     }
                 }
-                /*
-                //temp sample points
-                if (Tick % 600 == 0 && !SignalList.ContainsKey(0) && !SignalList.ContainsKey(1))
-                {
-
-                    var temp1 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "Mover (won't fade for a real one)", range = 1234, position = new Vector3I(1000, 2000, 3000), entityID = 123, sizeEnum = 3, relation = 0 }, Tick);
-                    var temp2 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "LAC.", range = 456700, position = new Vector3I(11000, 2000, 3000), entityID = 456, sizeEnum = 2, relation = 1 }, Tick);
-                    SignalList.TryAdd(0, temp1);
-                    SignalList.TryAdd(1, temp2);
-                }
-
-                if (SignalList.ContainsKey(2)) SignalList.Remove(2);
-                var temp3 = new MyTuple<SignalComp, int>(new SignalComp() { faction = "Norm Update", range = 4567000, position = new Vector3I(500000, 2000, 3000), entityID = 789, sizeEnum = 4, relation = 3 }, Tick);
-                SignalList.TryAdd(2, temp3);
-                //temp moving point for positional update tests
-                if (SignalList.ContainsKey(0)) SignalList[0].Item1.position += new Vector3I(100, 0, 0);
-                //end of temp sample points
-                */
             }
 
 
@@ -262,7 +254,6 @@ namespace ThrustBeacon
                 }
                 */
 
-
                 foreach (var signal in SignalList.ToArray())
                 {
                     var contact = signal.Value.Item1;
@@ -279,10 +270,13 @@ namespace ThrustBeacon
                         var contactAge = Tick - signal.Value.Item2;
                         if (contactAge >= stopDisplayTimeTicks)
                         {
-                            if(contactAge >= keepTimeTicks)
+                            if (contactAge >= keepTimeTicks)
                                 SignalList.Remove(signal.Key);
                             continue;
                         }
+                        float distance = Vector3.Distance(contact.position, camPos);
+                        if (distance < s.hideDistance) continue;
+
                         var baseColor = contact.relation == 1 ? s.enemyColor : contact.relation == 3 ? s.friendColor : s.neutralColor;
                         var adjColor = baseColor;
                         if (fadeTimeTicks > 0)
@@ -300,8 +294,7 @@ namespace ThrustBeacon
                         if (!offScreen)
                         {
                             var symbolPosition = new Vector2D(screenCoords.X, screenCoords.Y);
-                            var labelPosition = new Vector2D(screenCoords.X + (symbolHeight * 0.4), screenCoords.Y + (symbolHeight * 0.5));
-                            float distance = Vector3.Distance(contact.position, camPos);
+                            var labelPosition = new Vector2D(screenCoords.X + (s.symbolWidth * 0.25), screenCoords.Y + (symbolHeight * 0.4));
                             var dispSize = contact.range > 1000 ? (contact.range / 1000).ToString("0.#") + " km" : contact.range.ToString("0.#") + " m";
                             var dispRange = distance > 1000 ? (distance / 1000).ToString("0.#") + " km" : distance.ToString("0.#") + " m";
                             //var info = new StringBuilder(contact.faction + " " + dispSize + " sig " + "\n" + dispRange); //Testing alternate display
@@ -338,6 +331,7 @@ namespace ThrustBeacon
             if(Client)
             {
                 Save(Settings.Instance);
+                MyAPIGateway.Session.Player.Controller.ControlledEntityChanged -= GridChange;
             }
             if (wcAPI != null)
                 wcAPI.Unload();

@@ -22,11 +22,13 @@ namespace ThrustBeacon
             offscreenWidth = 0.06f,
             fadeOutTime = 1.5d,
             stopDisplayTime = 8d,
-            keepTime = 10d,            
+            keepTime = 10d,
             textSize = 1f,
             textSizeOwn = 1f,
             signalDrawCoords = new Vector2D(-0.7, -0.625),
             newTime = 2d,
+            hideDistance = 1000,
+            hideWC = true,
         };
 
         [ProtoMember(1)]
@@ -64,6 +66,12 @@ namespace ThrustBeacon
 
         [ProtoMember(12)]
         public double newTime { get; set; }
+        
+        [ProtoMember(13)]
+        public int hideDistance { get; set; }
+        [ProtoMember(14)]
+        public bool hideWC { get; set; }
+
 
 
     }
@@ -103,10 +111,10 @@ namespace ThrustBeacon
             Settings.Instance = settings;
         }
         HudAPIv2.MenuRootCategory SettingsMenu;
-        HudAPIv2.MenuSubCategory MoveSignalDisplay, OwnTextSize;
-        HudAPIv2.MenuItem MoveLeft, MoveRight, MoveUp, MoveDown, MoveReset, Reset, Blank, IncreaseOwn, DecreaseOwn;
+        HudAPIv2.MenuSubCategory MoveSignalDisplay, OwnTextSize, TextSize, SymbolSize;
+        HudAPIv2.MenuItem MoveLeft, MoveRight, MoveUp, MoveDown, MoveReset, Reset, Blank, IncreaseOwn, DecreaseOwn, IncreaseText, DecreaseText, IncreaseSymbol, DecreaseSymbol, HideWC;
         HudAPIv2.MenuColorPickerInput FriendColor, EnemyColor, NeutralColor;
-        HudAPIv2.MenuTextInput TextSize, SymbolSize, NewTime, FadeTime, StopDisplayTime, KeepTime;
+        HudAPIv2.MenuTextInput NewTime, FadeTime, StopDisplayTime, KeepTime, HideDist;
 
 
         private void InitMenu()
@@ -117,13 +125,17 @@ namespace ThrustBeacon
             NeutralColor = new HudAPIv2.MenuColorPickerInput("Select Neutral Signal Color >>", SettingsMenu, Settings.Instance.neutralColor, "Select Color", ColorNeutral);
 
 
-            SymbolSize = new HudAPIv2.MenuTextInput("Adjust Symbol Size >>", SettingsMenu, "Adjust Symbol Size - Default is 0.04", AdjSymbolSize);
-            TextSize = new HudAPIv2.MenuTextInput("Adjust Label Text Size >>", SettingsMenu, "Adjust Label Text Size - Default is 1", AdjLabelSize);
+            SymbolSize = new HudAPIv2.MenuSubCategory("Adjust Symbol Size >>", SettingsMenu, "Adjust Symbol Size");
+                IncreaseSymbol = new HudAPIv2.MenuItem("Increase symbol size", SymbolSize, IncreaseSymSz);
+                DecreaseSymbol = new HudAPIv2.MenuItem("Decrease symbol size", SymbolSize, DecreaseSymSz);
+
+            TextSize = new HudAPIv2.MenuSubCategory("Adjust Label Text Size >>", SettingsMenu, "Adjust Label Text Size");
+                IncreaseText = new HudAPIv2.MenuItem("Increase text size", TextSize, IncreaseTextSz);
+                DecreaseText = new HudAPIv2.MenuItem("Decrease text size", TextSize, DecreaseTextSz);
 
             OwnTextSize = new HudAPIv2.MenuSubCategory("Adjust Broadcast Info Size >>", SettingsMenu, "Adjust Broadcast Info Size");
                 IncreaseOwn = new HudAPIv2.MenuItem("Increase text size", OwnTextSize, IncreaseOwnSz);
                 DecreaseOwn = new HudAPIv2.MenuItem("Decrease text size", OwnTextSize, DecreaseOwnSz);
-
 
             MoveSignalDisplay = new HudAPIv2.MenuSubCategory("Move Broadcast Info Location >>", SettingsMenu, "Broadcast Info Location");
                 MoveLeft = new HudAPIv2.MenuItem("Move Left", MoveSignalDisplay, LeftMove);
@@ -133,6 +145,8 @@ namespace ThrustBeacon
                 MoveReset = new HudAPIv2.MenuItem("Reset Position", MoveSignalDisplay, ResetMove);
             Blank = new HudAPIv2.MenuItem("- - - - - - - - - - -", SettingsMenu, null);
             //NewTime = new HudAPIv2.MenuTextInput("Show new signal alert for " + Settings.Instance.newTime + " seconds", SettingsMenu, "Time to display new signal alert (in seconds)", NewTimeAdj);
+            HideDist = new HudAPIv2.MenuTextInput("Hide signals within " + Settings.Instance.hideDistance + "m", SettingsMenu, "Hide signals closer than distance provided below (in meters)", HideDistChange);
+            HideWC = new HudAPIv2.MenuItem("Suppress signals if detected by WC: " + Settings.Instance.hideWC, SettingsMenu, HideWCChange);
 
             FadeTime = new HudAPIv2.MenuTextInput("Fade out after " + Settings.Instance.fadeOutTime + " seconds", SettingsMenu, "Time to wait before fading out contact (in seconds)", FadeTimeAdj);
             StopDisplayTime = new HudAPIv2.MenuTextInput("Stop displaying after " + Settings.Instance.stopDisplayTime + " seconds", SettingsMenu, "Stop drawing contacts that have not updated (in seconds)", StopTimeAdj);
@@ -142,6 +156,44 @@ namespace ThrustBeacon
             Blank = new HudAPIv2.MenuItem("- - - - - - - - - - -", SettingsMenu, null);
 
             Reset = new HudAPIv2.MenuItem("Reset all Settings", SettingsMenu, ResetSettings);
+        }
+
+        private void HideWCChange()
+        {
+            Settings.Instance.hideWC = !Settings.Instance.hideWC;
+            HideWC.Text = "Suppress signals if detected by WC: " + Settings.Instance.hideWC;
+        }
+
+        private void HideDistChange(string obj)
+        {
+            int getter;
+            if (!int.TryParse(obj, out getter))
+                return;
+            Settings.Instance.hideDistance = getter;
+            HideDist.Text = "Hide signals within " + Settings.Instance.hideDistance + "m";
+        }
+
+        private void IncreaseSymSz()
+        {
+            Settings.Instance.symbolWidth += 0.0025f;
+            symbolHeight = Settings.Instance.symbolWidth * aspectRatio;
+            Settings.Instance.offscreenWidth = Settings.Instance.symbolWidth + 0.02f;
+            offscreenHeight = Settings.Instance.offscreenWidth * aspectRatio;
+        }
+        private void DecreaseSymSz()
+        {
+            Settings.Instance.symbolWidth -= 0.0025f;
+            symbolHeight = Settings.Instance.symbolWidth * aspectRatio;
+            Settings.Instance.offscreenWidth = Settings.Instance.symbolWidth + 0.02f;
+            offscreenHeight = Settings.Instance.offscreenWidth * aspectRatio;
+        }
+        private void IncreaseTextSz()
+        {
+            Settings.Instance.textSize += 0.025f;
+        }
+        private void DecreaseTextSz()
+        {
+            Settings.Instance.textSize -= 0.025f;
         }
 
         private void IncreaseOwnSz()
@@ -189,24 +241,6 @@ namespace ThrustBeacon
             Settings.Instance.enemyColor = obj;
             EnemyColor.InitialColor = obj;
         }
-
-        private void AdjSymbolSize(string obj)
-        {
-            float getter;
-            if (!float.TryParse(obj, out getter))
-                return;
-            Settings.Instance.symbolWidth = getter;
-            symbolHeight = Settings.Instance.symbolWidth * aspectRatio;
-            Settings.Instance.offscreenWidth = getter + 0.02f;
-            offscreenHeight = Settings.Instance.offscreenWidth * aspectRatio;
-        }
-        private void AdjLabelSize(string obj)
-        {
-            float getter;
-            if (!float.TryParse(obj, out getter))
-                return;
-            Settings.Instance.textSize = getter;
-        }
         private void NewTimeAdj(string obj)
         {
             double getter;
@@ -243,13 +277,7 @@ namespace ThrustBeacon
             LabelUpdate();
             keepTimeTicks = (int)(getter * 3600);
         }
-        private void AdjOwnLabelSize(string obj)
-        {
-            float getter;
-            if (!float.TryParse(obj, out getter))
-                return;
-            Settings.Instance.textSizeOwn = getter;
-        }
+
         private void ResetSettings()
         {
             MyAPIGateway.Utilities.ShowNotification("Options reset to default");

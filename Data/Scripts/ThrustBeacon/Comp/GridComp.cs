@@ -161,13 +161,6 @@ namespace ThrustBeacon
         {
             var ss = ServerSettings.Instance;
 
-            if (Grid.IsStatic && broadcastDist == 1)
-            {
-                broadcastDist = 1;
-                sizeEnum = 0;
-                return;
-            }
-
             broadcastDistOld = broadcastDist;
             broadcastDist = 0;
 

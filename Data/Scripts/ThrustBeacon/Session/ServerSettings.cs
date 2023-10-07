@@ -27,6 +27,7 @@ namespace ThrustBeacon
             MaxSignalforThrusterShutdown = 500000,
             IncludeWeaponHeatInSignal = true,
             DefaultWeaponHeatDivisor = 1, //Explore further and find a good starting point for this value
+            SendSignalDataToSuits = false
         };
 
         [ProtoMember(1)]
@@ -64,6 +65,9 @@ namespace ThrustBeacon
         
         [ProtoMember(12)]
         public double DefaultWeaponHeatDivisor { get; set; }
+
+        [ProtoMember(13)]
+        public bool SendSignalDataToSuits { get; set; }
     }
     public partial class Session
     {
