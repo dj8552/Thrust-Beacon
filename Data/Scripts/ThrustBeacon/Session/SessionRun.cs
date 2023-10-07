@@ -23,8 +23,6 @@ namespace ThrustBeacon
         public override void BeforeStart()
         {
             Networking.Register();
-            if(Client)
-                MyAPIGateway.Session.Player.Controller.ControlledEntityChanged += GridChange;
         }
         public override void LoadData()
         {
@@ -65,6 +63,9 @@ namespace ThrustBeacon
 
         public override void UpdateBeforeSimulation()
         {
+            if (Client && !clientActionRegistered && Session?.Player?.Controller != null)
+                Session.Player.Controller.ControlledEntityChanged += GridChange;
+
             if (Client && symbolHeight == 0)//TODO see if there's a better spot for this that only runs once... seems like Camera isn't available in LoadData
             {
                 aspectRatio = Session.Camera.ViewportSize.X / Session.Camera.ViewportSize.Y;
@@ -331,7 +332,9 @@ namespace ThrustBeacon
             if(Client)
             {
                 Save(Settings.Instance);
-                MyAPIGateway.Session.Player.Controller.ControlledEntityChanged -= GridChange;
+                
+                if(clientActionRegistered)
+                    Session.Player.Controller.ControlledEntityChanged -= GridChange;
             }
             if (wcAPI != null)
                 wcAPI.Unload();

@@ -59,6 +59,7 @@ namespace ThrustBeacon
         internal static int stopDisplayTimeTicks = 0;
         internal static int keepTimeTicks = 0;
         internal static int newTimeTicks = 0;
+        internal bool clientActionRegistered = false;
 
         internal void StartComps()
         {
