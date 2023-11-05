@@ -30,7 +30,7 @@ namespace Digi.Example_NetworkProtobuf
         {
             foreach (var signalRcvd in signalData)
             {
-                if(Session.SignalList.ContainsKey(signalRcvd.entityID))//TODO:  Any error checking needed on received data?
+                if(Session.SignalList.ContainsKey(signalRcvd.entityID))
                 {
                     var updateTuple = new MyTuple<SignalComp, int>(signalRcvd, Session.Tick);
                     Session.SignalList[signalRcvd.entityID] = updateTuple;

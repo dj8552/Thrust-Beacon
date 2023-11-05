@@ -66,7 +66,7 @@ namespace ThrustBeacon
             if (Client && !clientActionRegistered && Session?.Player?.Controller != null)
                 Session.Player.Controller.ControlledEntityChanged += GridChange;
 
-            if (Client && symbolHeight == 0)//TODO see if there's a better spot for this that only runs once... seems like Camera isn't available in LoadData
+            if (Client && symbolHeight == 0)
             {
                 aspectRatio = Session.Camera.ViewportSize.X / Session.Camera.ViewportSize.Y;
                 symbolHeight = Settings.Instance.symbolWidth * aspectRatio;
@@ -111,6 +111,8 @@ namespace ThrustBeacon
                     if (block != null && GridListSpecials.TryGetValue(block.CubeGrid, out playerComp))
                     {
                         playerGridDetectionModSqr = playerComp.detectionRange * playerComp.detectionRange;
+                        if (playerComp.detectionRange < 0)
+                            playerGridDetectionModSqr *= -1;
                         playerGridAccuracyMod = playerComp.detectionAccuracy;
                     }
 
@@ -130,7 +132,7 @@ namespace ThrustBeacon
                             signalData.faction = grid.faction;
                             signalData.entityID = grid.Grid.EntityId;
                             signalData.sizeEnum = grid.sizeEnum;
-                            //signalData.accuracy = TODO calc this
+                            //signalData.accuracy = TODO calc this.  For playerGrid, send +/- of own sig
                             if (!playerGrid && playerFaction != null)
                             {
                                 var relation = MyAPIGateway.Session.Factions.GetRelationBetweenFactions(playerFaction.FactionId, grid.factionID);

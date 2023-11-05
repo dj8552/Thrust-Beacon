@@ -292,6 +292,7 @@ namespace ThrustBeacon
             StopDisplayTime.Text = "Stop displaying after " + Settings.Instance.stopDisplayTime + " seconds";
             FadeTime.Text = "Fade out after " + Settings.Instance.fadeOutTime + " seconds";
             NewTime.Text = "Show new signal alert for " + Settings.Instance.newTime + " seconds";
+            HideDist.Text = "Hide signals within " + Settings.Instance.hideDistance + "m";
         }
 
     }
