@@ -95,7 +95,7 @@ namespace ThrustBeacon
 
             tempCfg.cfg.Dictionary.Add(sample1.subTypeID, sample1);
             tempCfg.cfg.Dictionary.Add(sample2.subTypeID, sample2);
-            tempCfg.cfg.Dictionary.Add(sample2.subTypeID, sample3);
+            tempCfg.cfg.Dictionary.Add(sample3.subTypeID, sample3);
 
             //BlockConfigs.Add(MyStringHash.GetOrCompute(sample1.subTypeID), sample1);
             //BlockConfigs.Add(MyStringHash.GetOrCompute(sample2.subTypeID), sample2);
