@@ -6,14 +6,12 @@ using Sandbox.ModAPI;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Sandbox.Game;
 using VRage;
 using VRage.Game.Components;
 using VRage.Game.Entity;
 using VRage.Utils;
 using VRageMath;
 using VRage.Game.ModAPI;
-using System.Diagnostics;
 
 namespace ThrustBeacon
 {
@@ -27,8 +25,8 @@ namespace ThrustBeacon
         public override void LoadData()
         {
             MPActive = MyAPIGateway.Multiplayer.MultiplayerActive;
-            Server = (MyAPIGateway.Multiplayer.MultiplayerActive && MyAPIGateway.Multiplayer.IsServer) || !MPActive;
-            Client = (MyAPIGateway.Multiplayer.MultiplayerActive && !MyAPIGateway.Multiplayer.IsServer) || !MPActive;
+            Server = (MPActive && MyAPIGateway.Multiplayer.IsServer) || !MPActive;
+            Client = (MPActive && !MyAPIGateway.Multiplayer.IsServer) || !MPActive;
             if (Client)
             {
                 InitConfig();
@@ -40,10 +38,12 @@ namespace ThrustBeacon
             if (Server)
             {
                 MyEntities.OnEntityCreate += OnEntityCreate;
-                LoadSignalProducerConfigs();
-                LoadBlockConfigs();
-                InitServerConfig();
-                List<VRage.Game.MyDefinitionId> tempWeaponDefs = new List<VRage.Game.MyDefinitionId>();
+                LoadSignalProducerConfigs(); //Blocks that generate signal (thrust, power)
+                LoadBlockConfigs(); //Blocks that alter targeting
+                InitServerConfig(); //Overall settings
+
+                //Roll subtype IDs of all WC weapons into a hash set
+                List<VRage.Game.MyDefinitionId> tempWeaponDefs = new List<VRage.Game.MyDefinitionId>();               
                 wcAPI.GetAllCoreWeapons(tempWeaponDefs);
                 foreach (var def in tempWeaponDefs)
                 {
@@ -53,6 +53,7 @@ namespace ThrustBeacon
 
         }
 
+        //Dump current signals when hopping out of a grid
         private void GridChange(VRage.Game.ModAPI.Interfaces.IMyControllableEntity previousEnt, VRage.Game.ModAPI.Interfaces.IMyControllableEntity newEnt)
         {
             if (newEnt is IMyCharacter)
@@ -63,9 +64,14 @@ namespace ThrustBeacon
 
         public override void UpdateBeforeSimulation()
         {
+            //Register client action of changing entity
             if (Client && !clientActionRegistered && Session?.Player?.Controller != null)
+            {
+                clientActionRegistered = true;
                 Session.Player.Controller.ControlledEntityChanged += GridChange;
+            }
 
+            //Calc draw ratio figures based on resolution
             if (Client && symbolHeight == 0)
             {
                 aspectRatio = Session.Camera.ViewportSize.X / Session.Camera.ViewportSize.Y;
@@ -73,22 +79,33 @@ namespace ThrustBeacon
                 offscreenHeight = Settings.Instance.offscreenWidth * aspectRatio;
             }
 
+            //Time keeps on ticking
             Tick++;
-            if (Server && Tick % 60 == 0)
+
+            //Server main loop
+            #region ServerLoop
+            if (Server && Tick % 59 == 0)
             {
+                //Init action to capture existing grids/blocks
                 if ((!_startBlocks.IsEmpty || !_startGrids.IsEmpty))
                     StartComps();
+
+                //Update grid comps to recalc signals
                 foreach (var gridComp in GridList)
                 {
+                    //TODO skip concealed grids?
+                    if (((uint)gridComp.Grid.Flags & 0x20000000) > 0)//Stealth check || !gridComp.Grid.IsReplicated)
+                        continue;
                     gridComp.CalcSignal();//TODO: See if there's a better way to account for pulsing/blipping the gas
                 }
+                
+                
                 //Find player controlled entities in range and broadcast to them
                 PlayerList.Clear();
-
                 if (MPActive)
                     MyAPIGateway.Multiplayer.Players.GetPlayers(PlayerList);
                 else
-                    PlayerList.Add(Session.Player);
+                    PlayerList.Add(Session.Player); //SP workaround
 
                 foreach (var player in PlayerList)
                 {
@@ -103,6 +120,7 @@ namespace ThrustBeacon
                         continue;
                     }
 
+                    //Pull modifiers for current players grid (IE if it has increased detection range)
                     var controlledEnt = player.Controller?.ControlledEntity?.Entity?.Parent?.EntityId;
                     var block = player.Controller?.ControlledEntity?.Entity as IMyCubeBlock;
                     GridComp playerComp = null;
@@ -118,12 +136,18 @@ namespace ThrustBeacon
 
                     var playerFaction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(player.IdentityId);
                     var tempList = new List<SignalComp>();
+
+                    //For each player, iterate each grid
                     foreach (var grid in GridList)
                     {
+                        var stealth = ((uint)grid.Grid.Flags & 0x20000000) > 0; //Stealth flag from Ash's mod
+                        //TODO Skip concealed grids?
+                        //TODO any other conditions to skip a grid?
                         var playerGrid = grid.Grid.EntityId == controlledEnt;
-                        if (!playerGrid && grid.broadcastDist < 2) continue;
+                        if ((!playerGrid && grid.broadcastDist < 2) || stealth) continue;
                         var gridPos = grid.Grid.PositionComp.WorldAABB.Center;
                         var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
+                        //Check if current grid is in detection range of the player
                         if (playerGrid || distToTargSqr <= grid.broadcastDistSqr + playerGridDetectionModSqr)
                         {
                             var signalData = new SignalComp();
@@ -142,6 +166,7 @@ namespace ThrustBeacon
                                 signalData.relation = 0;
                             tempList.Add(signalData);
 
+                            //SP workaround, client level update for MP occurs in PacketBase.Received()
                             if(!MPActive)
                             {
                                 if (SignalList.ContainsKey(signalData.entityID))
@@ -159,8 +184,10 @@ namespace ThrustBeacon
                 }
 
             }
+            #endregion
 
-            //Clientside list processing
+            //Clientside list processing to deconflict items shown by WC
+            #region ClientLoop
             if (Client && Tick % 59 == 0 && Settings.Instance.hideWC)
             {
                 entityIDList.Clear();
@@ -185,14 +212,16 @@ namespace ThrustBeacon
                     }
                 }
             }
+            #endregion
 
 
-            if (Server && Tick % 5 == 0 && powershutdownList.Count > 0)//5 tick interval to keep players from spamming keys to turn power back on
+            //Shutdown list updates in 5 tick interval to keep players from spamming keys to turn power back on.  Alternative is to register actions when the grid is in the shut down list, then de-register when removed.
+            if (Server && Tick % 5 == 0 && powershutdownList.Count > 0)
             {
                 foreach (var gridComp in powershutdownList.ToArray())
                     gridComp.TogglePower();
             }
-            if (Server && Tick % 5 == 0 && thrustshutdownList.Count > 0)//5 tick interval to keep players from spamming keys to turn power back on
+            if (Server && Tick % 5 == 0 && thrustshutdownList.Count > 0)
             {
                 foreach (var gridComp in thrustshutdownList.ToArray())
                     gridComp.ToggleThrust();
@@ -227,6 +256,7 @@ namespace ThrustBeacon
             return offset;
         }
 
+        //Main clientside loop for visuals
         public override void Draw()
         {
             if (Client && hudAPI.Heartbeat && SignalList.Count > 0 && MyAPIGateway.Session.Config.HudState != 0 && !MyAPIGateway.Gui.IsCursorVisible)
@@ -260,6 +290,8 @@ namespace ThrustBeacon
                 foreach (var signal in SignalList.ToArray())
                 {
                     var contact = signal.Value.Item1;
+
+                    //Signal for own occupied grid
                     if (contact.entityID == playerEnt)
                     {
                         var dispRange = contact.range > 1000 ? (contact.range / 1000f).ToString("0.#") + " km" : contact.range + " m";
@@ -267,6 +299,7 @@ namespace ThrustBeacon
                         var Label = new HudAPIv2.HUDMessage(info, s.signalDrawCoords, null, 2, s.textSizeOwn, true, true);
                         Label.Visible = true;
                     }
+                    //Other grid signals received from server
                     else
                     {
                         //if (NewSignalList.ContainsKey(contact.entityID)) continue;
@@ -294,7 +327,9 @@ namespace ThrustBeacon
                         var adjustedPos = camPos + Vector3D.Normalize((Vector3D)contactPosition - camPos) * viewDist;
                         var screenCoords = Vector3D.Transform(adjustedPos, viewProjectionMat);
                         var offScreen = screenCoords.X > 1 || screenCoords.X < -1 || screenCoords.Y > 1 || screenCoords.Y < -1 || screenCoords.Z > 1;
-                        if (!offScreen)
+
+                        //Draw symbol on grid with text
+                        if (!offScreen) 
                         {
                             var symbolPosition = new Vector2D(screenCoords.X, screenCoords.Y);
                             var labelPosition = new Vector2D(screenCoords.X + (s.symbolWidth * 0.25), screenCoords.Y + (symbolHeight * 0.4));
@@ -307,14 +342,14 @@ namespace ThrustBeacon
                             Label.Visible = true;
                             var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbolList[contact.sizeEnum], symbolPosition, adjColor, Width: s.symbolWidth, Height: symbolHeight, TimeToLive: 2, HideHud: true, Shadowing: true);
                         }
+                        //Draw off screen indicators and arrows
                         else
                         {
                             if (screenCoords.Z > 1)//Camera is between player and target
                                 screenCoords *= -1;
                             var vectorToPt = new Vector2D(screenCoords.X, screenCoords.Y);
                             vectorToPt.Normalize();
-                            vectorToPt *= offscreenSquish;
-
+                            vectorToPt *= offscreenSquish; //This flattens the Y axis so symbols don't overlap the hotbar and brings the X closer in
                             var rotation = (float)Math.Atan2(screenCoords.X, screenCoords.Y);
                             var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbolOffscreenArrow, vectorToPt, adjColor, Width: s.offscreenWidth * 0.75f, Height: offscreenHeight, TimeToLive: 2, Rotation: rotation, HideHud: true, Shadowing: true);
                             var symbolObj2 = new HudAPIv2.BillBoardHUDMessage(symbolList[contact.sizeEnum], vectorToPt, adjColor, Width: s.symbolWidth, Height: symbolHeight, TimeToLive: 2, HideHud: true, Shadowing: true);

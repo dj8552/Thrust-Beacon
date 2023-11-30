@@ -87,18 +87,15 @@ namespace ThrustBeacon
             var sample3 = new BlockConfig();
             //This would emulate an actively powered internal heatsink (aka Mass Effect Normandy), decreasing detection range by 10km
             //but at the cost of slower cooldown, degraded range of your sensors by 2.5km, and high energy cost to have active (energy via SBC)
-            sample2.subTypeID = "stealthDrive";
-            sample2.SignalRange = -10000;
-            sample2.SignalCooldown = 0.01f;
-            sample2.DetectionRange = -2500;
+            sample3.subTypeID = "stealthDrive";
+            sample3.SignalRange = -10000;
+            sample3.SignalCooldown = 0.01f;
+            sample3.DetectionRange = -2500;
 
 
             tempCfg.cfg.Dictionary.Add(sample1.subTypeID, sample1);
             tempCfg.cfg.Dictionary.Add(sample2.subTypeID, sample2);
             tempCfg.cfg.Dictionary.Add(sample3.subTypeID, sample3);
-
-            //BlockConfigs.Add(MyStringHash.GetOrCompute(sample1.subTypeID), sample1);
-            //BlockConfigs.Add(MyStringHash.GetOrCompute(sample2.subTypeID), sample2);
 
             TextWriter writer;
             writer = MyAPIGateway.Utilities.WriteFileInWorldStorage(Filename, typeof(BlockConfigDict));
@@ -117,10 +114,10 @@ namespace ThrustBeacon
     public class ProducerConfig
     {
         [ProtoMember(1)]
-        public string subTypeID { get; set; }
+        public string subTypeID { get; set; } //Plain text subtypeID for signal producing thruster or power generation blocks
 
         [ProtoMember(2)]
-        public int divisor { get; set; }
+        public int divisor { get; set; } //Amount to divide current output by.  For thrusters it's current thrust/divisor, for power it's current output/divisor
     }
     public partial class Session
     {
@@ -143,7 +140,7 @@ namespace ThrustBeacon
         }
         public void WriteProducerDefaults()
         {
-            var Filename = "ThrusterConfig.cfg";
+            var Filename = "SignalProducerConfig.cfg";
             var sampleMap = new Dictionary<string, int>()           
             {
                 { "ARYLNX_RAIDER_Epstein_Drive", 733 },

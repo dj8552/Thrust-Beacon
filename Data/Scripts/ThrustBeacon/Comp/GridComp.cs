@@ -40,6 +40,7 @@ namespace ThrustBeacon
 
         internal void FatBlockAdded(MyCubeBlock block)
         {
+            //Ownership update
             if(block.CubeGrid.BigOwners != null && block.CubeGrid.BigOwners.Count > 0)
             {
                 var curFaction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(block.CubeGrid.BigOwners[0]);
@@ -55,7 +56,7 @@ namespace ThrustBeacon
             var thruster = block as IMyThrust;
             var weapon = Session.weaponSubtypeIDs.Contains(subTypeID);
 
-
+            //Checks if block is a signal producer or weapon and adds it to the appropriate list
             if (power != null)
             {
                 int divisor;
@@ -79,6 +80,7 @@ namespace ThrustBeacon
                 weaponList.Add(block);
             }
 
+            //Checks if the block is a specialty one that alters signal
             if (Session.BlockConfigs.ContainsKey(subTypeID))
             {
                 specialsDirty = true;
@@ -90,6 +92,7 @@ namespace ThrustBeacon
 
         }
 
+        //Monitors specialty blocks that alter signal for Enabled changing
         private void Func_EnabledChanged(IMyTerminalBlock obj)
         {
             specialsDirty = true;
@@ -117,6 +120,7 @@ namespace ThrustBeacon
             }
         }
 
+        //Update modifiers from specialty blocks
         internal void RecalcSpecials()
         {
             if (gridSize == 0)
@@ -156,6 +160,7 @@ namespace ThrustBeacon
             specialsDirty = false;
         }
 
+        //Called by the server to refresh the signal output before checking it against clients in range
         internal void CalcSignal()
         {
             var ss = ServerSettings.Instance;
@@ -243,6 +248,7 @@ namespace ThrustBeacon
                 sizeEnum = 5;
             }
 
+            //Shutdown condition checks
             if (ss.ShutdownPowerOverMaxSignal)
             {
                 if (broadcastDist >= ss.MaxSignalforPowerShutdown)
@@ -293,14 +299,12 @@ namespace ThrustBeacon
             Grid = null;
             thrustList.Clear();
             powerList.Clear();
-
             foreach(var s in specials)
             {
                 var func = s as IMyFunctionalBlock;
                 if (func != null)
                     func.EnabledChanged -= Func_EnabledChanged;
             }
-
             specials.Clear();
             broadcastDist = 0;
             broadcastDistSqr = 0;

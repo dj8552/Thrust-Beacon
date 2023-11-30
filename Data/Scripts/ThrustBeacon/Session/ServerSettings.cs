@@ -1,11 +1,6 @@
 ﻿using ProtoBuf;
-using Draygo.API;
 using Sandbox.ModAPI;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using VRage.Utils;
-using VRageMath;
 
 namespace ThrustBeacon
 {
@@ -16,9 +11,9 @@ namespace ThrustBeacon
         public static readonly ServerSettings Default = new ServerSettings()
         {
             IncludePowerInSignal = true,
-            DefaultPowerDivisor = 600,
+            DefaultPowerDivisor = 600, //Default power divisor if no other value is specified
             IncludeThrustInSignal = true,
-            DefaultThrustDivisor = 600,
+            DefaultThrustDivisor = 600, //Default thrust divisor if no other value is specified
             LargeGridCooldownRate = 0.95f, //Previous signal is multiplied by this per 59 tick cycle (unless freshly calc'd value is > than old value)
             SmallGridCooldownRate = 0.85f, //Same as above
             ShutdownPowerOverMaxSignal = true,
@@ -27,7 +22,7 @@ namespace ThrustBeacon
             MaxSignalforThrusterShutdown = 500000,
             IncludeWeaponHeatInSignal = true,
             DefaultWeaponHeatDivisor = 1, //Explore further and find a good starting point for this value
-            SendSignalDataToSuits = false
+            SendSignalDataToSuits = false //If false, characters outside of grids will not get beacon updates
         };
 
         [ProtoMember(1)]
