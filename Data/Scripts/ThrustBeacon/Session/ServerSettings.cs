@@ -22,7 +22,7 @@ namespace ThrustBeacon
             MaxSignalforThrusterShutdown = 500000,
             IncludeWeaponHeatInSignal = true,
             DefaultWeaponHeatDivisor = 1, //Explore further and find a good starting point for this value
-            SendSignalDataToSuits = false //If false, characters outside of grids will not get beacon updates
+            SendSignalDataToSuits = false, //If false, characters outside of grids will not get beacon updates
         };
 
         [ProtoMember(1)]

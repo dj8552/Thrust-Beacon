@@ -30,7 +30,6 @@ namespace Digi.Example_NetworkProtobuf
                 else //This contact is new to the client
                 {
                     Session.SignalList.TryAdd(signalRcvd.entityID, new MyTuple<SignalComp, int>(signalRcvd, Session.Tick));
-                    //Session.NewSignalList.TryAdd(signalRcvd.entityID, new MyTuple<SignalComp, int>(signalRcvd, Session.Tick));
                 }
             }
             return false;           

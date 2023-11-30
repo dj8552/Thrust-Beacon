@@ -82,37 +82,44 @@ namespace ThrustBeacon
             //Time keeps on ticking
             Tick++;
 
-            //Server main loop
-            #region ServerLoop
+            //Server timed updates
+            #region ServerUpdates
             if (Server && Tick % 59 == 0)
             {
                 //Init action to capture existing grids/blocks
                 if ((!_startBlocks.IsEmpty || !_startGrids.IsEmpty))
                     StartComps();
 
-                //Update grid comps to recalc signals
-                foreach (var gridComp in GridList)
-                {
-                    //TODO skip concealed grids?
-                    if (((uint)gridComp.Grid.Flags & 0x20000000) > 0)//Stealth check || !gridComp.Grid.IsReplicated)
-                        continue;
-                    gridComp.CalcSignal();//TODO: See if there's a better way to account for pulsing/blipping the gas
-                }
-                
-                
                 //Find player controlled entities in range and broadcast to them
                 PlayerList.Clear();
                 if (MPActive)
                     MyAPIGateway.Multiplayer.Players.GetPlayers(PlayerList);
                 else
                     PlayerList.Add(Session.Player); //SP workaround
+            }
+            #endregion
 
+            #region ServerLoop
+            //Server main loop
+            if (Server)
+            {
+                //Update grid comps to recalc signals on a background thread.  Rand element to make blipping the gas to avoid detection harder
+                foreach (var gridComp in GridList)
+                {
+                    //Recalc a grid on a rolling random frequency with a max age of 59 ticks
+                    if (Tick - gridComp.lastUpdate > rand.Next(59) && !(((uint)gridComp.Grid.Flags & 0x20000000) > 0))
+                        MyAPIGateway.Parallel.StartBackground(gridComp.CalcSignal);
+                }
+
+                //Update players if the last 2 digits of their identity ID = tick % 100 to spread out network updates
+                var tickMod = Tick % 100;
                 foreach (var player in PlayerList)
                 {
-                    if (player == null || player.Character == null || (MPActive && player.SteamUserId == 0) || (!ServerSettings.Instance.SendSignalDataToSuits && player.Controller.ControlledEntity is IMyCharacter))
+                    if (player == null || player.IsBot || player.Character == null || (MPActive && player.SteamUserId == 0) || (player.IdentityId % 100 != tickMod) || (!ServerSettings.Instance.SendSignalDataToSuits && player.Controller.ControlledEntity is IMyCharacter))
                     {
                         continue;
                     }
+
                     var playerPos = player.Character.WorldAABB.Center;
                     if (playerPos == Vector3D.Zero)
                     {
@@ -125,13 +132,11 @@ namespace ThrustBeacon
                     var block = player.Controller?.ControlledEntity?.Entity as IMyCubeBlock;
                     GridComp playerComp = null;
                     var playerGridDetectionModSqr = 0f;
-                    var playerGridAccuracyMod = 0f;
                     if (block != null && GridListSpecials.TryGetValue(block.CubeGrid, out playerComp))
                     {
                         playerGridDetectionModSqr = playerComp.detectionRange * playerComp.detectionRange;
                         if (playerComp.detectionRange < 0)
                             playerGridDetectionModSqr *= -1;
-                        playerGridAccuracyMod = playerComp.detectionAccuracy;
                     }
 
                     var playerFaction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(player.IdentityId);
@@ -141,12 +146,12 @@ namespace ThrustBeacon
                     foreach (var grid in GridList)
                     {
                         var stealth = ((uint)grid.Grid.Flags & 0x20000000) > 0; //Stealth flag from Ash's mod
-                        //TODO Skip concealed grids?
-                        //TODO any other conditions to skip a grid?
+                        //TODO Skip concealed grids? any other conditions to skip a grid?
                         var playerGrid = grid.Grid.EntityId == controlledEnt;
                         if ((!playerGrid && grid.broadcastDist < 2) || stealth) continue;
                         var gridPos = grid.Grid.PositionComp.WorldAABB.Center;
                         var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
+
                         //Check if current grid is in detection range of the player
                         if (playerGrid || distToTargSqr <= grid.broadcastDistSqr + playerGridDetectionModSqr)
                         {
@@ -156,7 +161,6 @@ namespace ThrustBeacon
                             signalData.faction = grid.faction;
                             signalData.entityID = grid.Grid.EntityId;
                             signalData.sizeEnum = grid.sizeEnum;
-                            //signalData.accuracy = TODO calc this.  For playerGrid, send +/- of own sig
                             if (!playerGrid && playerFaction != null)
                             {
                                 var relation = MyAPIGateway.Session.Factions.GetRelationBetweenFactions(playerFaction.FactionId, grid.factionID);
@@ -167,7 +171,7 @@ namespace ThrustBeacon
                             tempList.Add(signalData);
 
                             //SP workaround, client level update for MP occurs in PacketBase.Received()
-                            if(!MPActive)
+                            if (!MPActive)
                             {
                                 if (SignalList.ContainsKey(signalData.entityID))
                                 {
@@ -183,9 +187,9 @@ namespace ThrustBeacon
                     if (MPActive && tempList.Count > 0)
                         Networking.SendToPlayer(new PacketBase(tempList), player.SteamUserId);
                 }
-
             }
             #endregion
+
 
             //Clientside list processing to deconflict items shown by WC
             #region ClientLoop
@@ -230,33 +234,6 @@ namespace ThrustBeacon
 
         }
 
-        //TODO tie in accuracy to jitter
-        public float ComputeSignalStrength(SignalComp contact, float distance)
-        {
-            float maxJitterDistance = 400000f;
-            float f = distance / maxJitterDistance;
-            return 1.0f - Math.Min(f, 1.0f);
-        }
-
-        public Vector3I GetRandomJitter(SignalComp contact, Vector3 camPos)
-        {
-            int tickRate = 60;
-            float minimumJitterCutoff = 0.25f;
-            float maxJitterAmount = contact.accuracy;
-
-            float distance = Vector3.Distance(contact.position, camPos);
-            Random random = new Random((int)contact.entityID + (Tick / tickRate));
-            float amount = 1.0f - ComputeSignalStrength(contact, distance);
-            amount = amount < minimumJitterCutoff ? 0.0f : amount;
-
-            int jitter = (int)MathHelper.Lerp(0, maxJitterAmount, amount * amount);
-            int x = random.Next(jitter * 2) - jitter;
-            int y = random.Next(jitter * 2) - jitter;
-            int z = random.Next(jitter * 2) - jitter;
-            Vector3I offset = new Vector3I(x, y, z);
-            return offset;
-        }
-
         //Main clientside loop for visuals
         public override void Draw()
         {
@@ -267,27 +244,7 @@ namespace ThrustBeacon
                 var camPos = Session.Camera.Position;
                 var playerEnt = MyAPIGateway.Session?.Player?.Controller?.ControlledEntity?.Entity?.Parent?.EntityId;
 
-                /*
-                foreach (var newSignal in NewSignalList.ToArray())
-                {
-                    var contact = newSignal.Value.Item1;
-                    if (contact.entityID == playerEnt)
-                    {
-                        NewSignalList.Remove(newSignal.Key);
-                        continue;
-                    }
-                    var contactAge = Tick - newSignal.Value.Item2;
-
-                    if (contactAge >= newTimeTicks)
-                    {
-                        NewSignalList.Remove(newSignal.Key);
-                        continue;
-                    }
-                    
-                    //Newly discovered signal AV shenanigans go here
-                }
-                */
-
+                //Draw main signal list
                 foreach (var signal in SignalList.ToArray())
                 {
                     var contact = signal.Value.Item1;
@@ -303,7 +260,6 @@ namespace ThrustBeacon
                     //Other grid signals received from server
                     else
                     {
-                        //if (NewSignalList.ContainsKey(contact.entityID)) continue;
                         var contactAge = Tick - signal.Value.Item2;
                         if (contactAge >= stopDisplayTimeTicks)
                         {
@@ -324,8 +280,7 @@ namespace ThrustBeacon
                             adjColor.B = (byte)MathHelper.Clamp(baseColor.B - colorFade, 0, 255);
                         }
 
-                        var contactPosition = contact.position + GetRandomJitter(contact, camPos);
-                        var adjustedPos = camPos + Vector3D.Normalize((Vector3D)contactPosition - camPos) * viewDist;
+                        var adjustedPos = camPos + Vector3D.Normalize((Vector3D)contact.position - camPos) * viewDist;
                         var screenCoords = Vector3D.Transform(adjustedPos, viewProjectionMat);
                         var offScreen = screenCoords.X > 1 || screenCoords.X < -1 || screenCoords.Y > 1 || screenCoords.Y < -1 || screenCoords.Z > 1;
 
@@ -334,8 +289,8 @@ namespace ThrustBeacon
                         {
                             var symbolPosition = new Vector2D(screenCoords.X, screenCoords.Y);
                             var labelPosition = new Vector2D(screenCoords.X + (s.symbolWidth * 0.25), screenCoords.Y + (symbolHeight * 0.4));
-                            var dispSize = contact.range > 1000 ? (contact.range / 1000).ToString("0.#") + " km" : contact.range.ToString("0.#") + " m";
                             var dispRange = distance > 1000 ? (distance / 1000).ToString("0.#") + " km" : distance.ToString("0.#") + " m";
+                            //var dispSize = contact.range > 1000 ? (contact.range / 1000).ToString("0.#") + " km" : contact.range.ToString("0.#") + " m";
                             //var info = new StringBuilder(contact.faction + " " + dispSize + " sig " + "\n" + dispRange); //Testing alternate display
                             var info = new StringBuilder(contact.faction + messageList[contact.sizeEnum] + "\n" + dispRange);
                             var Label = new HudAPIv2.HUDMessage(info, labelPosition, new Vector2D(0, -0.001), 2, s.textSize, true, true);
@@ -381,7 +336,7 @@ namespace ThrustBeacon
             Networking?.Unregister();
             Networking = null;
             PlayerList.Clear();
-            GridList.Clear();
+            GridList.ClearImmediate();
             SignalList.Clear();
             NewSignalList.Clear();
             threatList.Clear();

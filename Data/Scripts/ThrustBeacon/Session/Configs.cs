@@ -1,11 +1,8 @@
 ﻿using ProtoBuf;
-using Draygo.API;
 using Sandbox.ModAPI;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using VRage.Utils;
-using VRageMath;
 using VRage.Serialization;
 using System.ComponentModel;
 
@@ -34,15 +31,7 @@ namespace ThrustBeacon
 
         [ProtoMember(4)]
         [DefaultValue(0)]
-        public float SignalAccuracy { get; set; }//TODO TBD
-
-        [ProtoMember(5)]
-        [DefaultValue(0)]
         public float DetectionRange { get; set; }//Meters- Positive to make detection of others possible at higher dist
-
-        [ProtoMember(6)]
-        [DefaultValue(0)]
-        public float DetectionAccuracy { get; set; }//TODO TBD
 
     }
     public partial class Session

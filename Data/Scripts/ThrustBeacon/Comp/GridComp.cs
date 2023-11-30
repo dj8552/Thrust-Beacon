@@ -2,7 +2,6 @@
 using Sandbox.ModAPI;
 using System.Collections.Generic;
 using VRage.Game.Entity;
-using VRage.Game.ModAPI;
 
 namespace ThrustBeacon
 {
@@ -24,10 +23,8 @@ namespace ThrustBeacon
         internal float coolDownRate = 0f;
         internal float signalRange = 0f;
         internal float detectionRange = 0f;
-        internal float detectionAccuracy = 0f;
-        internal float signalAccuracy = 0f;
-
         internal bool specialsDirty = false;
+        internal int lastUpdate = 0;
         
         internal void Init(MyCubeGrid grid)
         {
@@ -127,8 +124,6 @@ namespace ThrustBeacon
                 coolDownRate = ServerSettings.Instance.LargeGridCooldownRate;
             else
                 coolDownRate = ServerSettings.Instance.SmallGridCooldownRate;
-            detectionAccuracy = 0; //TODO check if 0 or 1 is appropriate baseline
-            signalAccuracy = 0; //TODO check if 0 or 1 is appropriate baseline
             detectionRange = 0;
             signalRange = 0;
 
@@ -139,8 +134,6 @@ namespace ThrustBeacon
                 if (!active) continue;
                 var cfg = Session.BlockConfigs[special.BlockDefinition.Id.SubtypeId];
                 coolDownRate += cfg.SignalCooldown;
-                detectionAccuracy += cfg.DetectionAccuracy; //TODO Additive or mult?
-                signalAccuracy += cfg.SignalAccuracy; //TODO Additive or mult?
                 detectionRange += cfg.DetectionRange;
                 signalRange += cfg.SignalRange;
             }
@@ -247,6 +240,8 @@ namespace ThrustBeacon
             {
                 sizeEnum = 5;
             }
+
+            lastUpdate = Session.Tick;
 
             //Shutdown condition checks
             if (ss.ShutdownPowerOverMaxSignal)

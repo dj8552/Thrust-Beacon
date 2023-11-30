@@ -25,7 +25,7 @@ namespace ThrustBeacon
         internal bool MPActive;
         internal static HudAPIv2 hudAPI;
         internal static WcApi wcAPI;
-        public Networking Networking = new Networking(1337); //TODO: Pick a new number based on mod ID
+        public Networking Networking = new Networking(1212); //TODO: Pick a new number based on mod ID
         internal MyStringId symbol = MyStringId.GetOrCompute("FrameSignal");
         internal MyStringId symbolOffscreenArrow = MyStringId.GetOrCompute("ArrowOffset");
 
@@ -35,13 +35,13 @@ namespace ThrustBeacon
         internal List<string> messageList = new List<string>() {"Idle Sig", "Small Sig", "Medium Sig", "Large Sig", "Huge Sig", "Massive Sig", "OVERHEAT - SHUTDOWN"};
         internal static float symbolHeight = 0f;//Leave this as zero, monitor aspect ratio is figured in later
         internal float aspectRatio = 0f;//Leave this as zero, monitor aspect ratio is figured in later
-        internal Vector2D offscreenSquish = new Vector2D(0.9, 0.7);
+        internal Vector2D offscreenSquish = new Vector2D(0.9, 0.7);//Pulls X in a little, flattens Y to not overlap hotbar
         internal int viewDist = 0;
         internal static float offscreenHeight = 0f;
         private readonly Stack<GridComp> _gridCompPool = new Stack<GridComp>(128);
         private readonly ConcurrentCachingList<MyCubeBlock> _startBlocks = new ConcurrentCachingList<MyCubeBlock>();
         private readonly ConcurrentCachingList<MyCubeGrid> _startGrids = new ConcurrentCachingList<MyCubeGrid>();
-        internal readonly List<GridComp> GridList = new List<GridComp>();
+        internal readonly ConcurrentCachingList<GridComp> GridList = new ConcurrentCachingList<GridComp>();
         internal static readonly Dictionary<IMyCubeGrid,GridComp> GridListSpecials = new Dictionary<IMyCubeGrid, GridComp>();
         internal static readonly List<MyStringHash> weaponSubtypeIDs = new List<MyStringHash>();
         internal readonly ConcurrentDictionary<IMyCubeGrid, GridComp> GridMap = new ConcurrentDictionary<IMyCubeGrid, GridComp>();
@@ -58,8 +58,8 @@ namespace ThrustBeacon
         internal static int fadeTimeTicks = 0;
         internal static int stopDisplayTimeTicks = 0;
         internal static int keepTimeTicks = 0;
-        internal static int newTimeTicks = 0;
         internal bool clientActionRegistered = false;
+        Random rand = new Random();
 
         internal void StartComps()
         {
@@ -77,6 +77,7 @@ namespace ThrustBeacon
                     gridComp.Init(grid);
 
                     GridList.Add(gridComp);
+                    GridList.ApplyAdditions();
                     GridMap[grid] = gridComp;
                     grid.OnClose += OnGridClose;
                 }
@@ -111,7 +112,7 @@ namespace ThrustBeacon
             _gridCompPool.Clear();
             _startBlocks.ClearImmediate();
             _startGrids.ClearImmediate();
-            GridList.Clear();
+            GridList.ClearImmediate();
             GridMap.Clear();
             BlockConfigs.Clear();
             SignalProducer.Clear();
@@ -141,7 +142,7 @@ namespace ThrustBeacon
             if (GridMap.TryRemove(grid, out comp))
             {
                 GridList.Remove(comp);
-
+                GridList.ApplyRemovals();
                 comp.Clean();
                 _gridCompPool.Push(comp);
             }

@@ -1,10 +1,7 @@
 ﻿using ProtoBuf;
 using Draygo.API;
 using Sandbox.ModAPI;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using VRage.Utils;
 using VRageMath;
 
 namespace ThrustBeacon
@@ -20,7 +17,7 @@ namespace ThrustBeacon
             neutralColor = Color.White,
             symbolWidth = 0.04f,
             offscreenWidth = 0.06f,
-            fadeOutTime = 1.5d,
+            fadeOutTime = 2d,
             stopDisplayTime = 8d,
             keepTime = 10d,
             textSize = 1f,
@@ -98,8 +95,6 @@ namespace ThrustBeacon
             fadeTimeTicks = (int)(s.fadeOutTime * 60);
             stopDisplayTimeTicks = (int)(s.stopDisplayTime * 60);
             keepTimeTicks = (int)(s.keepTime * 3600);
-            newTimeTicks = (int)(s.newTime * 60);
-
         }
         public void Save(Settings settings)
         {
@@ -114,7 +109,7 @@ namespace ThrustBeacon
         HudAPIv2.MenuSubCategory MoveSignalDisplay, OwnTextSize, TextSize, SymbolSize;
         HudAPIv2.MenuItem MoveLeft, MoveRight, MoveUp, MoveDown, MoveReset, Reset, Blank, IncreaseOwn, DecreaseOwn, IncreaseText, DecreaseText, IncreaseSymbol, DecreaseSymbol, HideWC;
         HudAPIv2.MenuColorPickerInput FriendColor, EnemyColor, NeutralColor;
-        HudAPIv2.MenuTextInput NewTime, FadeTime, StopDisplayTime, KeepTime, HideDist;
+        HudAPIv2.MenuTextInput FadeTime, StopDisplayTime, KeepTime, HideDist;
 
 
         private void InitMenu()
@@ -144,7 +139,6 @@ namespace ThrustBeacon
                 MoveDown = new HudAPIv2.MenuItem("Move Down", MoveSignalDisplay, DownMove);
                 MoveReset = new HudAPIv2.MenuItem("Reset Position", MoveSignalDisplay, ResetMove);
             Blank = new HudAPIv2.MenuItem("- - - - - - - - - - -", SettingsMenu, null);
-            //NewTime = new HudAPIv2.MenuTextInput("Show new signal alert for " + Settings.Instance.newTime + " seconds", SettingsMenu, "Time to display new signal alert (in seconds)", NewTimeAdj);
             HideDist = new HudAPIv2.MenuTextInput("Hide signals within " + Settings.Instance.hideDistance + "m", SettingsMenu, "Hide signals closer than distance provided below (in meters)", HideDistChange);
             HideWC = new HudAPIv2.MenuItem("Suppress signals if detected by WC: " + Settings.Instance.hideWC, SettingsMenu, HideWCChange);
 
@@ -241,15 +235,6 @@ namespace ThrustBeacon
             Settings.Instance.enemyColor = obj;
             EnemyColor.InitialColor = obj;
         }
-        private void NewTimeAdj(string obj)
-        {
-            double getter;
-            if (!double.TryParse(obj, out getter))
-                return;
-            Settings.Instance.newTime = getter;
-            LabelUpdate();
-            newTimeTicks = (int)(getter * 60);
-        }
         private void FadeTimeAdj(string obj)
         {
             double getter;
@@ -291,7 +276,6 @@ namespace ThrustBeacon
             KeepTime.Text = "Purge signal record after " + Settings.Instance.keepTime + " minutes";
             StopDisplayTime.Text = "Stop displaying after " + Settings.Instance.stopDisplayTime + " seconds";
             FadeTime.Text = "Fade out after " + Settings.Instance.fadeOutTime + " seconds";
-            NewTime.Text = "Show new signal alert for " + Settings.Instance.newTime + " seconds";
             HideDist.Text = "Hide signals within " + Settings.Instance.hideDistance + "m";
         }
 

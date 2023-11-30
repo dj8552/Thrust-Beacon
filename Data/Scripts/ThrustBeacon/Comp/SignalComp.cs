@@ -18,7 +18,5 @@ namespace ThrustBeacon
         public byte sizeEnum;
         [ProtoMember(6)]
         public byte relation; //1 = enemy, 0 = neutral, 3 = friendly
-        [ProtoMember(7)]
-        public int accuracy;
     }
 }
