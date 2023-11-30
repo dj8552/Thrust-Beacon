@@ -1,6 +1,7 @@
 ﻿using ProtoBuf;
 using Sandbox.ModAPI;
 using System.IO;
+using VRage.Utils;
 
 namespace ThrustBeacon
 {
@@ -78,6 +79,7 @@ namespace ThrustBeacon
                 reader.Close();
                 s = MyAPIGateway.Utilities.SerializeFromXML<ServerSettings>(text);
                 ServerSettings.Instance = s;
+                MyLog.Default.WriteLineAndConsole(ModName + "Loaded server config");
             }
             else
             {
@@ -93,6 +95,8 @@ namespace ThrustBeacon
             writer.Write(MyAPIGateway.Utilities.SerializeToXML(settings));
             writer.Close();
             ServerSettings.Instance = settings;
+            MyLog.Default.WriteLineAndConsole(ModName + "Saved server config sample");
+
         }
     }
 }

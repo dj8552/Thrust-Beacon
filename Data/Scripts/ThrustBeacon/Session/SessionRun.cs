@@ -44,13 +44,14 @@ namespace ThrustBeacon
 
                 //Roll subtype IDs of all WC weapons into a hash set
                 List<VRage.Game.MyDefinitionId> tempWeaponDefs = new List<VRage.Game.MyDefinitionId>();               
-                wcAPI.GetAllCoreWeapons(tempWeaponDefs);
+                if(wcAPI != null) 
+                    wcAPI.GetAllCoreWeapons(tempWeaponDefs);
                 foreach (var def in tempWeaponDefs)
                 {
-                    weaponSubtypeIDs.Add(def.SubtypeId);                  
+                    weaponSubtypeIDs.Add(def.SubtypeId);
+                    MyLog.Default.WriteLineAndConsole(ModName + $"Registered {weaponSubtypeIDs.Count} weapon block types");
                 }
             }
-
         }
 
         //Dump current signals when hopping out of a grid
@@ -69,6 +70,7 @@ namespace ThrustBeacon
             {
                 clientActionRegistered = true;
                 Session.Player.Controller.ControlledEntityChanged += GridChange;
+                MyLog.Default.WriteLineAndConsole(ModName + "Registered client ControlledEntityChanged action");
             }
 
             //Calc draw ratio figures based on resolution
@@ -107,11 +109,11 @@ namespace ThrustBeacon
                 foreach (var gridComp in GridList)
                 {
                     //Recalc a grid on a rolling random frequency with a max age of 59 ticks
-                    if (Tick - gridComp.lastUpdate > rand.Next(59) && !(((uint)gridComp.Grid.Flags & 0x20000000) > 0))
+                    if ((Tick - gridComp.lastUpdate > rand.Next(118) || gridComp.specialsDirty || Tick - gridComp.lastUpdate > 59) && !(((uint)gridComp.Grid.Flags & 0x20000000) > 0))
                         MyAPIGateway.Parallel.StartBackground(gridComp.CalcSignal);
                 }
 
-                //Update players if the last 2 digits of their identity ID = tick % 100 to spread out network updates
+                //Update players if the last 2 digits of their identity ID = tick % 100 to spread out network updates.  If 100 ticks is too long, div by 2
                 var tickMod = Tick % 100;
                 foreach (var player in PlayerList)
                 {
@@ -123,7 +125,7 @@ namespace ThrustBeacon
                     var playerPos = player.Character.WorldAABB.Center;
                     if (playerPos == Vector3D.Zero)
                     {
-                        MyLog.Default.WriteLineAndConsole($"Player position error - Vector3D.Zero - player.Name: {player.DisplayName} - player.SteamUserId: {player.SteamUserId}");
+                        MyLog.Default.WriteLineAndConsole(ModName + $"Player position error - Vector3D.Zero - player.Name: {player.DisplayName} - player.SteamUserId: {player.SteamUserId}");
                         continue;
                     }
 

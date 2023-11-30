@@ -60,6 +60,7 @@ namespace ThrustBeacon
         internal static int keepTimeTicks = 0;
         internal bool clientActionRegistered = false;
         Random rand = new Random();
+        internal string ModName = "[Thrust Beacon]"; //Since I may change the name, this is used in logging
 
         internal void StartComps()
         {

@@ -207,7 +207,10 @@ namespace ThrustBeacon
             //Cooldown
             if (broadcastDistOld > broadcastDist || Grid.IsStatic)
             {
-                broadcastDist = (int)(broadcastDistOld * coolDownRate);
+                //Reworked cooldown to normalize to a per second value, since recalcs are on a variable schedule
+                var partialCoolDown = (broadcastDistOld - broadcastDistOld * coolDownRate) * ((float)(Session.Tick - lastUpdate) / 59);
+                broadcastDist = (int)(broadcastDistOld - partialCoolDown);
+                
                 if (broadcastDist <= 1)
                     broadcastDist = 1;
             }

@@ -3,6 +3,7 @@ using Draygo.API;
 using Sandbox.ModAPI;
 using System.IO;
 using VRageMath;
+using VRage.Utils;
 
 namespace ThrustBeacon
 {
@@ -91,10 +92,14 @@ namespace ThrustBeacon
             {
                 s = Settings.Default;
                 Save(s);
+                MyLog.Default.WriteLineAndConsole(ModName + "Saved default client config");
+
             }
             fadeTimeTicks = (int)(s.fadeOutTime * 60);
             stopDisplayTimeTicks = (int)(s.stopDisplayTime * 60);
             keepTimeTicks = (int)(s.keepTime * 3600);
+            MyLog.Default.WriteLineAndConsole(ModName + "Initialized client config");
+
         }
         public void Save(Settings settings)
         {

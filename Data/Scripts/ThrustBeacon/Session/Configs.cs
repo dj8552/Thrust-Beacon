@@ -47,6 +47,7 @@ namespace ThrustBeacon
                 reader.Close();
                 foreach (var temp in configListTemp)
                     BlockConfigs.Add(MyStringHash.GetOrCompute(temp.subTypeID), temp);
+                MyLog.Default.WriteLineAndConsole(ModName + $"Loaded {BlockConfigs.Count} blocks from block config");
             }
             else
             {
@@ -90,6 +91,7 @@ namespace ThrustBeacon
             writer = MyAPIGateway.Utilities.WriteFileInWorldStorage(Filename, typeof(BlockConfigDict));
             writer.Write(MyAPIGateway.Utilities.SerializeToXML(tempCfg));
             writer.Close();
+            MyLog.Default.WriteLineAndConsole(ModName + "Wrote sample block config");
         }
     }
 
@@ -121,6 +123,7 @@ namespace ThrustBeacon
                 reader.Close();
                 foreach (var temp in configListTemp)
                     SignalProducer.Add(temp.subTypeID, temp.divisor);
+                MyLog.Default.WriteLineAndConsole(ModName + $"loaded {SignalProducer.Count} signal producers from config");
             }
             else
             {
@@ -168,6 +171,8 @@ namespace ThrustBeacon
             writer = MyAPIGateway.Utilities.WriteFileInWorldStorage(Filename, typeof(SignalProducerCfgDict));
             writer.Write(MyAPIGateway.Utilities.SerializeToXML(tempCfg));
             writer.Close();
+            MyLog.Default.WriteLineAndConsole(ModName + "Wrote default signal producer config");
+
         }
     }   
 }
