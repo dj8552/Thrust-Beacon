@@ -179,6 +179,7 @@ namespace ThrustBeacon
                             }
                         }
                     }
+                    //If there's anything to send to the player, fire it off via the Networking
                     if (MPActive && tempList.Count > 0)
                         Networking.SendToPlayer(new PacketBase(tempList), player.SteamUserId);
                 }

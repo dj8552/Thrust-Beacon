@@ -22,12 +22,12 @@ namespace Digi.Example_NetworkProtobuf
         {
             foreach (var signalRcvd in signalData)
             {
-                if(Session.SignalList.ContainsKey(signalRcvd.entityID))
+                if(Session.SignalList.ContainsKey(signalRcvd.entityID)) //Client already had this in their list, update data
                 {
                     var updateTuple = new MyTuple<SignalComp, int>(signalRcvd, Session.Tick);
                     Session.SignalList[signalRcvd.entityID] = updateTuple;
                 }
-                else
+                else //This contact is new to the client
                 {
                     Session.SignalList.TryAdd(signalRcvd.entityID, new MyTuple<SignalComp, int>(signalRcvd, Session.Tick));
                     //Session.NewSignalList.TryAdd(signalRcvd.entityID, new MyTuple<SignalComp, int>(signalRcvd, Session.Tick));
