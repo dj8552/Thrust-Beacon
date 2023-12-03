@@ -253,6 +253,9 @@ namespace ThrustBeacon
                 sizeEnum = 5;
             }
 
+            //Analytics and time updates
+            Session.aUpdateQty++;
+            Session.aUpdateTime += Session.Tick - lastUpdate;
             lastUpdate = Session.Tick;
 
             //Shutdown condition checks

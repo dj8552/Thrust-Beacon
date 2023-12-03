@@ -8,13 +8,6 @@ using System.ComponentModel;
 
 namespace ThrustBeacon
 {
-
-    public class BlockConfigDict
-    {
-        [ProtoMember(1)]
-        public SerializableDictionary<string, BlockConfig> cfg { get; set; }
-    }
-
     [ProtoContract]
     public class BlockConfig
     {
@@ -39,15 +32,25 @@ namespace ThrustBeacon
         private void LoadBlockConfigs()
         {
             var Filename = "BlockConfig.cfg";
-            var localFileExists = MyAPIGateway.Utilities.FileExistsInLocalStorage(Filename, typeof(BlockConfigDict));
+            var localFileExists = MyAPIGateway.Utilities.FileExistsInWorldStorage(Filename, typeof(BlockConfig));
             if (localFileExists)
             {
-                TextReader reader = MyAPIGateway.Utilities.ReadFileInLocalStorage(Filename, typeof(BlockConfigDict));
-                var configListTemp = MyAPIGateway.Utilities.SerializeFromXML<List<BlockConfig>>(reader.ReadToEnd()); 
-                reader.Close();
-                foreach (var temp in configListTemp)
-                    BlockConfigs.Add(MyStringHash.GetOrCompute(temp.subTypeID), temp);
-                MyLog.Default.WriteLineAndConsole(ModName + $"Loaded {BlockConfigs.Count} blocks from block config");
+                try
+                {
+
+                    TextReader reader = MyAPIGateway.Utilities.ReadFileInWorldStorage(Filename, typeof(BlockConfig));
+                    var configListTemp = MyAPIGateway.Utilities.SerializeFromXML<List<BlockConfig>>(reader.ReadToEnd());
+                    reader.Close();
+                    foreach (var temp in configListTemp)
+                        BlockConfigs.Add(MyStringHash.GetOrCompute(temp.subTypeID), temp);
+                    MyLog.Default.WriteLineAndConsole(ModName + $"Loaded {BlockConfigs.Count} blocks from block config");
+                }
+                catch
+                {
+                    MyAPIGateway.Utilities.ShowMessage(ModName, "Error reading block configs file, using defaults");
+                    MyLog.Default.WriteLineAndConsole(ModName + "Error reading block configs file, using defaults");
+                    WriteBlockDefaults();
+                }
             }
             else
             {
@@ -57,8 +60,7 @@ namespace ThrustBeacon
         public void WriteBlockDefaults()
         {
             var Filename = "BlockConfig.cfg";
-            var tempCfg = new BlockConfigDict();
-            tempCfg.cfg = new SerializableDictionary<string, BlockConfig>();
+            var tempCfg = new List<BlockConfig>();
 
             var sample1 = new BlockConfig(); 
             //This would emulate a passive heat sink, which improves the cooldown rate but does add a
@@ -83,22 +85,16 @@ namespace ThrustBeacon
             sample3.DetectionRange = -2500;
 
 
-            tempCfg.cfg.Dictionary.Add(sample1.subTypeID, sample1);
-            tempCfg.cfg.Dictionary.Add(sample2.subTypeID, sample2);
-            tempCfg.cfg.Dictionary.Add(sample3.subTypeID, sample3);
+            tempCfg.Add(sample1);
+            tempCfg.Add(sample2);
+            tempCfg.Add(sample3);
 
             TextWriter writer;
-            writer = MyAPIGateway.Utilities.WriteFileInWorldStorage(Filename, typeof(BlockConfigDict));
+            writer = MyAPIGateway.Utilities.WriteFileInWorldStorage(Filename, typeof(BlockConfig));
             writer.Write(MyAPIGateway.Utilities.SerializeToXML(tempCfg));
             writer.Close();
             MyLog.Default.WriteLineAndConsole(ModName + "Wrote sample block config");
         }
-    }
-
-    public class SignalProducerCfgDict
-    {
-        [ProtoMember(1)]
-        public SerializableDictionary<string, int> cfg { get; set; }
     }
 
     [ProtoContract]
@@ -115,15 +111,25 @@ namespace ThrustBeacon
         private void LoadSignalProducerConfigs()
         {
             var Filename = "SignalProducerConfig.cfg";
-            var localFileExists = MyAPIGateway.Utilities.FileExistsInLocalStorage(Filename, typeof(ProducerConfig));
+            var localFileExists = MyAPIGateway.Utilities.FileExistsInWorldStorage(Filename, typeof(ProducerConfig));
             if (localFileExists)
             {
-                TextReader reader = MyAPIGateway.Utilities.ReadFileInLocalStorage(Filename, typeof(ProducerConfig));
-                var configListTemp = MyAPIGateway.Utilities.SerializeFromXML<List<ProducerConfig>>(reader.ReadToEnd());
-                reader.Close();
-                foreach (var temp in configListTemp)
-                    SignalProducer.Add(temp.subTypeID, temp.divisor);
-                MyLog.Default.WriteLineAndConsole(ModName + $"loaded {SignalProducer.Count} signal producers from config");
+                try
+                {
+                    TextReader reader = MyAPIGateway.Utilities.ReadFileInWorldStorage(Filename, typeof(ProducerConfig));
+                    var configListTemp = MyAPIGateway.Utilities.SerializeFromXML<List<ProducerConfig>>(reader.ReadToEnd());
+
+                    reader.Close();
+                    foreach (var temp in configListTemp)
+                        SignalProducer.Add(temp.subTypeID, temp.divisor);
+                    MyLog.Default.WriteLineAndConsole(ModName + $"loaded {SignalProducer.Count} signal producers from config");
+                }
+                catch
+                {
+                    MyAPIGateway.Utilities.ShowMessage(ModName, "Error reading signal producers file, using defaults");
+                    MyLog.Default.WriteLineAndConsole(ModName + "Error reading signal producers file, using defaults");
+                    WriteProducerDefaults();
+                }
             }
             else
             {
@@ -159,16 +165,18 @@ namespace ThrustBeacon
                 { "SmallBlockSmallGenerator", 12345}
 
             };
-            var tempCfg = new SignalProducerCfgDict();
-            tempCfg.cfg = new SerializableDictionary<string, int>();
+            var tempCfg = new List<ProducerConfig>();
             foreach (var temp in sampleMap)
             {
-                tempCfg.cfg.Dictionary.Add(temp.Key, temp.Value);
+                var newCfg = new ProducerConfig();
+                newCfg.subTypeID = temp.Key;
+                newCfg.divisor = temp.Value;
+                tempCfg.Add(newCfg);
                 SignalProducer.Add(temp.Key, temp.Value);
             }
 
             TextWriter writer;
-            writer = MyAPIGateway.Utilities.WriteFileInWorldStorage(Filename, typeof(SignalProducerCfgDict));
+            writer = MyAPIGateway.Utilities.WriteFileInWorldStorage(Filename, typeof(ProducerConfig));
             writer.Write(MyAPIGateway.Utilities.SerializeToXML(tempCfg));
             writer.Close();
             MyLog.Default.WriteLineAndConsole(ModName + "Wrote default signal producer config");

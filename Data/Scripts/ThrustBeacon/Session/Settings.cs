@@ -82,18 +82,27 @@ namespace ThrustBeacon
             var localFileExists = MyAPIGateway.Utilities.FileExistsInLocalStorage(Filename, typeof(Settings));
             if(localFileExists)
             {
-                TextReader reader = MyAPIGateway.Utilities.ReadFileInLocalStorage(Filename, typeof(Settings));
-                string text = reader.ReadToEnd();
-                reader.Close();
-                s = MyAPIGateway.Utilities.SerializeFromXML<Settings>(text);
-                Settings.Instance = s;
+                try
+                {
+                    TextReader reader = MyAPIGateway.Utilities.ReadFileInLocalStorage(Filename, typeof(Settings));
+                    string text = reader.ReadToEnd();
+                    reader.Close();
+                    s = MyAPIGateway.Utilities.SerializeFromXML<Settings>(text);
+                    Settings.Instance = s;
+                }
+                catch
+                {
+                    MyAPIGateway.Utilities.ShowMessage(ModName, "Error reading client config file, using defaults");
+                    MyLog.Default.WriteLineAndConsole(ModName + "Error reading client config file, using defaults");
+                    s = Settings.Default;
+                    Save(s);
+                }
             }
             else
             {
                 s = Settings.Default;
                 Save(s);
                 MyLog.Default.WriteLineAndConsole(ModName + "Saved default client config");
-
             }
             fadeTimeTicks = (int)(s.fadeOutTime * 60);
             stopDisplayTimeTicks = (int)(s.stopDisplayTime * 60);

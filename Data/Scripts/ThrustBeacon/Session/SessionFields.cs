@@ -63,6 +63,13 @@ namespace ThrustBeacon
         internal bool clientActionRegistered = false;
         Random rand = new Random();
         internal string ModName = "[Thrust Beacon]"; //Since I may change the name, this is used in logging
+        internal static int aUpdateTime = 0;
+        internal static int aUpdateQty = 0;
+        internal int aPacketQty = 0;
+        internal int aPlayerQty = 0;
+        internal int aLastLog = 0;
+        internal int aLogTime = 18000; //5 minutes
+
 
         internal void StartComps()
         {

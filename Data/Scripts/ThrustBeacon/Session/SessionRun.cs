@@ -112,7 +112,8 @@ namespace ThrustBeacon
                 foreach (var gridComp in GridList)
                 {
                     //Recalc a grid on a rolling random frequency with a max age of 59 ticks
-                    if ((Tick - gridComp.lastUpdate > rand.Next(118) || gridComp.specialsDirty || Tick - gridComp.lastUpdate > 59) && !(((uint)gridComp.Grid.Flags & 0x20000000) > 0))
+                    //Using 236 in the rand to give an approx 1 in 4 chance of an early update, but no faster than every 15 ticks
+                    if ((Tick - gridComp.lastUpdate - 15 > rand.Next(236) || gridComp.specialsDirty || Tick - gridComp.lastUpdate > 59) && !(((uint)gridComp.Grid.Flags & 0x20000000) > 0))
                         MyAPIGateway.Parallel.StartBackground(gridComp.CalcSignal);
                 }
 
@@ -131,7 +132,7 @@ namespace ThrustBeacon
                         MyLog.Default.WriteLineAndConsole(ModName + $"Player position error - Vector3D.Zero - player.Name: {player.DisplayName} - player.SteamUserId: {player.SteamUserId}");
                         continue;
                     }
-
+                    aPlayerQty++;
                     //Pull modifiers for current players grid (IE if it has increased detection range)
                     var controlledEnt = player.Controller?.ControlledEntity?.Entity?.Parent?.EntityId;
                     var block = player.Controller?.ControlledEntity?.Entity as IMyCubeBlock;
@@ -190,7 +191,25 @@ namespace ThrustBeacon
                     }
                     //If there's anything to send to the player, fire it off via the Networking
                     if (MPActive && tempList.Count > 0)
+                    {
                         Networking.SendToPlayer(new PacketBase(tempList), player.SteamUserId);
+                        aPacketQty++;
+                    }
+                }
+
+                //Analytics logging
+                if(Tick > aLastLog + aLogTime)
+                {
+                    MyLog.Default.WriteLineAndConsole(ModName + $"Analytics:\n" +
+                        $"GridComp CalcSignal calls - {aUpdateQty} - avg ticks between updates - {aUpdateTime / aUpdateQty}\n" +
+                        $"Player iterations - {aPlayerQty} - Packets sent - {aPacketQty}");
+
+                    aPacketQty = 0;
+                    aPlayerQty = 0;
+                    aUpdateQty = 0;
+                    aUpdateTime = 0;
+
+                    aLastLog = Tick;
                 }
             }
             #endregion
