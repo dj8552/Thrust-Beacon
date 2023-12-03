@@ -24,6 +24,8 @@ namespace ThrustBeacon
             IncludeWeaponHeatInSignal = true,
             DefaultWeaponHeatDivisor = 1, //Explore further and find a good starting point for this value
             SendSignalDataToSuits = false, //If false, characters outside of grids will not get beacon updates
+            IncludeShieldHPInSignal = true,
+            DefaultShieldHPDivisor = 50,
         };
 
         [ProtoMember(1)]
@@ -64,6 +66,11 @@ namespace ThrustBeacon
 
         [ProtoMember(13)]
         public bool SendSignalDataToSuits { get; set; }
+
+        [ProtoMember(14)]
+        public bool IncludeShieldHPInSignal { get; set; }
+        [ProtoMember(15)]
+        public int DefaultShieldHPDivisor { get; set; }
     }
     public partial class Session
     {

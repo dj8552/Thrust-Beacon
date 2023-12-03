@@ -1,4 +1,5 @@
 ﻿using CoreSystems.Api;
+using DefenseShields;
 using Digi.Example_NetworkProtobuf;
 using Draygo.API;
 using Sandbox.Game.Entities;
@@ -25,6 +26,7 @@ namespace ThrustBeacon
         internal bool MPActive;
         internal static HudAPIv2 hudAPI;
         internal static WcApi wcAPI;
+        internal static ShieldApi dsAPI;
         public Networking Networking = new Networking(1212); //TODO: Pick a new number based on mod ID
         internal MyStringId symbol = MyStringId.GetOrCompute("FrameSignal");
         internal MyStringId symbolOffscreenArrow = MyStringId.GetOrCompute("ArrowOffset");

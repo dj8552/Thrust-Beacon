@@ -2,6 +2,7 @@
 using Sandbox.ModAPI;
 using System.Collections.Generic;
 using VRage.Game.Entity;
+using VRage.Game.ModAPI;
 
 namespace ThrustBeacon
 {
@@ -193,7 +194,7 @@ namespace ThrustBeacon
             }
 
             //WeaponHeat
-            if (ss.IncludeWeaponHeatInSignal)
+            if (ss.IncludeWeaponHeatInSignal && Session.wcAPI.IsReady)
             {
                 double rawWepHeat = 0.0d;
                 foreach(var wep in weaponList)
@@ -202,6 +203,14 @@ namespace ThrustBeacon
                 }
                 rawWepHeat /= ss.DefaultWeaponHeatDivisor;
                 broadcastDist += (int)rawWepHeat;
+            }
+
+            //Defense Shields
+            if (ss.IncludeShieldHPInSignal && Session.dsAPI.IsReady && Session.dsAPI.GridHasShield(Grid))
+            {
+                broadcastDist += (int)(Session.dsAPI.GetShieldInfo(Grid).Item3 * 100 / ss.DefaultShieldHPDivisor);
+                //Item 3 is charge, mult by 100 for HP
+                //Item 6 is heat, 0-100 in increments of 10
             }
 
             //Cooldown

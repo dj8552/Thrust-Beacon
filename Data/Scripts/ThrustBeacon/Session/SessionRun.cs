@@ -12,6 +12,7 @@ using VRage.Game.Entity;
 using VRage.Utils;
 using VRageMath;
 using VRage.Game.ModAPI;
+using DefenseShields;
 
 namespace ThrustBeacon
 {
@@ -37,6 +38,8 @@ namespace ThrustBeacon
             wcAPI.Load();
             if (Server)
             {
+                dsAPI = new ShieldApi();
+                dsAPI.Load();
                 MyEntities.OnEntityCreate += OnEntityCreate;
                 LoadSignalProducerConfigs(); //Blocks that generate signal (thrust, power)
                 LoadBlockConfigs(); //Blocks that alter targeting
@@ -323,6 +326,8 @@ namespace ThrustBeacon
             {
                 MyEntities.OnEntityCreate -= OnEntityCreate;       
                 Clean();
+                if (dsAPI != null)
+                    dsAPI.Unload();
             }
             if(Client)
             {
