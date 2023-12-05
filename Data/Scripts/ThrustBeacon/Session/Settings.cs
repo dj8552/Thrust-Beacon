@@ -133,7 +133,6 @@ namespace ThrustBeacon
             EnemyColor = new HudAPIv2.MenuColorPickerInput("Select Enemy Signal Color >>", SettingsMenu, Settings.Instance.enemyColor, "Select Color", ColorEnemy);
             NeutralColor = new HudAPIv2.MenuColorPickerInput("Select Neutral Signal Color >>", SettingsMenu, Settings.Instance.neutralColor, "Select Color", ColorNeutral);
 
-
             SymbolSize = new HudAPIv2.MenuSubCategory("Adjust Symbol Size >>", SettingsMenu, "Adjust Symbol Size");
                 IncreaseSymbol = new HudAPIv2.MenuItem("Increase symbol size", SymbolSize, IncreaseSymSz);
                 DecreaseSymbol = new HudAPIv2.MenuItem("Decrease symbol size", SymbolSize, DecreaseSymSz);
@@ -160,7 +159,6 @@ namespace ThrustBeacon
             StopDisplayTime = new HudAPIv2.MenuTextInput("Stop displaying after " + Settings.Instance.stopDisplayTime + " seconds", SettingsMenu, "Stop drawing contacts that have not updated (in seconds)", StopTimeAdj);
             KeepTime = new HudAPIv2.MenuTextInput("Purge signal record after " + Settings.Instance.keepTime + " minutes", SettingsMenu, "Purge signal record without updates (in minutes)", KeepTimeAdj);
 
-
             Blank = new HudAPIv2.MenuItem("- - - - - - - - - - -", SettingsMenu, null);
 
             Reset = new HudAPIv2.MenuItem("Reset all Settings", SettingsMenu, ResetSettings);
@@ -171,7 +169,6 @@ namespace ThrustBeacon
             Settings.Instance.hideWC = !Settings.Instance.hideWC;
             HideWC.Text = "Suppress signals if detected by WC: " + Settings.Instance.hideWC;
         }
-
         private void HideDistChange(string obj)
         {
             int getter;
@@ -180,7 +177,6 @@ namespace ThrustBeacon
             Settings.Instance.hideDistance = getter;
             HideDist.Text = "Hide signals within " + Settings.Instance.hideDistance + "m";
         }
-
         private void IncreaseSymSz()
         {
             Settings.Instance.symbolWidth += 0.0025f;
@@ -203,17 +199,14 @@ namespace ThrustBeacon
         {
             Settings.Instance.textSize -= 0.025f;
         }
-
         private void IncreaseOwnSz()
         {
             Settings.Instance.textSizeOwn += 0.025f;
-
         }
         private void DecreaseOwnSz()
         {
             Settings.Instance.textSizeOwn -= 0.025f;
         }
-
         private void LeftMove()
         {
             Settings.Instance.signalDrawCoords += new Vector2D(-0.01, 0);
@@ -276,7 +269,6 @@ namespace ThrustBeacon
             LabelUpdate();
             keepTimeTicks = (int)(getter * 3600);
         }
-
         private void ResetSettings()
         {
             MyAPIGateway.Utilities.ShowNotification("Options reset to default");
@@ -284,7 +276,6 @@ namespace ThrustBeacon
             Save(Settings.Instance);
             LabelUpdate();
         }
-
         private void LabelUpdate()
         {
             KeepTime.Text = "Purge signal record after " + Settings.Instance.keepTime + " minutes";

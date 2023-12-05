@@ -104,8 +104,8 @@ namespace ThrustBeacon
             }
             #endregion
 
-            #region ServerLoop
             //Server main loop
+            #region ServerLoop
             if (Server)
             {
                 //Update grid comps to recalc signals on a background thread.  Rand element to make blipping the gas to avoid detection harder
@@ -350,8 +350,7 @@ namespace ThrustBeacon
             }
             if(Client)
             {
-                Save(Settings.Instance);
-                
+                Save(Settings.Instance);                
                 if(clientActionRegistered)
                     Session.Player.Controller.ControlledEntityChanged -= GridChange;
             }
@@ -362,9 +361,7 @@ namespace ThrustBeacon
             Networking?.Unregister();
             Networking = null;
             PlayerList.Clear();
-            GridList.ClearImmediate();
             SignalList.Clear();
-            NewSignalList.Clear();
             threatList.Clear();
             obsList.Clear();
             powershutdownList.Clear();

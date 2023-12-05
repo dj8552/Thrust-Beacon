@@ -8,17 +8,14 @@ namespace Digi.Example_NetworkProtobuf
     [ProtoContract]
     public class PacketBase
     {
-
         [ProtoMember(1)]
         public List<SignalComp> signalData;
-
         public PacketBase() { } // Empty constructor required for deserialization
-
         public PacketBase(List<SignalComp> signaldata)
         {
             signalData = signaldata;
         }
-        public bool Received()
+        public void Received()
         {
             foreach (var signalRcvd in signalData)
             {
@@ -28,11 +25,8 @@ namespace Digi.Example_NetworkProtobuf
                     Session.SignalList[signalRcvd.entityID] = updateTuple;
                 }
                 else //This contact is new to the client
-                {
                     Session.SignalList.TryAdd(signalRcvd.entityID, new MyTuple<SignalComp, int>(signalRcvd, Session.Tick));
-                }
             }
-            return false;           
         }
     }
 }

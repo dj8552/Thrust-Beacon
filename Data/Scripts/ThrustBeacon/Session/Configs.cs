@@ -3,7 +3,6 @@ using Sandbox.ModAPI;
 using System.Collections.Generic;
 using System.IO;
 using VRage.Utils;
-using VRage.Serialization;
 using System.ComponentModel;
 using System;
 
@@ -14,19 +13,15 @@ namespace ThrustBeacon
     {
         [ProtoMember(1)]
         public string subTypeID { get; set; }//Block subtypeID.  Can be a passive or functional block.  Functional blocks will be checked if enabled for any bonuses/effects
-
         [ProtoMember(2)]
         [DefaultValue(0)]
         public float SignalCooldown { get; set; }//Additive to cooldown mult.  For ex -0.05f would make a grid cooldown faster
-
         [ProtoMember(3)]
         [DefaultValue(0)]
         public float SignalRange { get; set; }//Meters- Positive to make this grid detectable further, negative to decrease distance for being detected.
-
         [ProtoMember(4)]
         [DefaultValue(0)]
         public float DetectionRange { get; set; }//Meters- Positive to make detection of others possible at higher dist
-
     }
     public partial class Session
     {
@@ -49,45 +44,23 @@ namespace ThrustBeacon
                 {
                     if (reader != null) reader.Close();
                     MyLog.Default.WriteLineAndConsole(ModName + "Error reading block configs file, using defaults - " + e.InnerException);
-                    WriteBlockDefaults();
+                    WriteBlockSamples();
                 }
             }
             else
             {
-                WriteBlockDefaults();
+                WriteBlockSamples();
             }
         }
-        public void WriteBlockDefaults()
+        public void WriteBlockSamples()
         {
             var Filename = "BlockConfig.cfg";
-            var tempCfg = new List<BlockConfig>();
-
-            var sample1 = new BlockConfig(); 
-            //This would emulate a passive heat sink, which improves the cooldown rate but does add a
-            //fixed 1km to signal as the thermal emission/reflective surface would be more easily detected
-            sample1.subTypeID = "heatsinkExample";
-            sample1.SignalRange = 1000;
-            sample1.SignalCooldown = -0.02f;
-
-            var sample2 = new BlockConfig();
-            //This would emulate a passive antenna that adds 5KM to the range to detect other grids,
-            //but the risk of bouncing signals back increases the range to detect this grid by 2.5KM
-            sample2.subTypeID = "detectionAntenna";
-            sample2.SignalRange = 2500;
-            sample2.DetectionRange = 5000;
-
-            var sample3 = new BlockConfig();
-            //This would emulate an actively powered internal heatsink (aka Mass Effect Normandy), decreasing detection range by 10km
-            //but at the cost of slower cooldown, degraded range of your sensors by 2.5km, and high energy cost to have active (energy via SBC)
-            sample3.subTypeID = "stealthDrive";
-            sample3.SignalRange = -10000;
-            sample3.SignalCooldown = 0.01f;
-            sample3.DetectionRange = -2500;
-
-
-            tempCfg.Add(sample1);
-            tempCfg.Add(sample2);
-            tempCfg.Add(sample3);
+            var tempCfg = new List<BlockConfig>()
+            {
+            new BlockConfig() {subTypeID = "heatsinkExample", SignalRange = 1000, SignalCooldown = -0.02f},
+            new BlockConfig() {subTypeID = "detectionAntenna", SignalRange = 2500, DetectionRange = 5000},
+            new BlockConfig() {subTypeID = "stealthDrive", SignalRange = -10000, SignalCooldown = 0.01f, DetectionRange = -2500}
+            };
 
             TextWriter writer;
             writer = MyAPIGateway.Utilities.WriteFileInWorldStorage(Filename, typeof(BlockConfig));
@@ -102,7 +75,6 @@ namespace ThrustBeacon
     {
         [ProtoMember(1)]
         public string subTypeID { get; set; } //Plain text subtypeID for signal producing thruster or power generation blocks
-
         [ProtoMember(2)]
         public int divisor { get; set; } //Amount to divide current output by.  For thrusters it's current thrust/divisor, for power it's current output/divisor
     }
@@ -167,9 +139,7 @@ namespace ThrustBeacon
             var tempCfg = new List<ProducerConfig>();
             foreach (var temp in sampleMap)
             {
-                var newCfg = new ProducerConfig();
-                newCfg.subTypeID = temp.Key;
-                newCfg.divisor = temp.Value;
+                var newCfg = new ProducerConfig() {subTypeID = temp.Key, divisor = temp.Value};
                 tempCfg.Add(newCfg);
                 SignalProducer.Add(temp.Key, temp.Value);
             }

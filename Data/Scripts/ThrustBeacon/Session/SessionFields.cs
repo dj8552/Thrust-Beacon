@@ -51,7 +51,6 @@ namespace ThrustBeacon
         internal static readonly Dictionary<MyStringHash, BlockConfig> BlockConfigs = new Dictionary<MyStringHash, BlockConfig>();
         internal List<IMyPlayer> PlayerList = new List<IMyPlayer>();
         internal static ConcurrentDictionary<long, MyTuple<SignalComp, int>> SignalList = new ConcurrentDictionary<long, MyTuple<SignalComp, int>>();
-        internal static ConcurrentDictionary<long, MyTuple<SignalComp, int>> NewSignalList = new ConcurrentDictionary<long, MyTuple<SignalComp, int>>();
         internal ICollection<MyTuple<MyEntity, float>> threatList = new List<MyTuple<MyEntity, float>>();
         internal ICollection<MyEntity> obsList = new List<MyEntity>();
         internal List<long> entityIDList = new List<long>();
@@ -79,25 +78,21 @@ namespace ThrustBeacon
                 for (int i = 0; i < _startGrids.Count; i++)
                 {
                     var grid = _startGrids[i];
-
                     if (grid.IsPreview)
                         continue;
 
                     var gridComp = _gridCompPool.Count > 0 ? _gridCompPool.Pop() : new GridComp();
                     gridComp.Init(grid);
-
                     GridList.Add(gridComp);
                     GridList.ApplyAdditions();
                     GridMap[grid] = gridComp;
                     grid.OnClose += OnGridClose;
                 }
                 _startGrids.ClearImmediate();
-
                 _startBlocks.ApplyAdditions();
                 for (int i = 0; i < _startBlocks.Count; i++)
                 {
                     var block = _startBlocks[i];
-
                     if (block?.CubeGrid?.Physics == null || block.CubeGrid.IsPreview)
                         continue;
 
@@ -105,12 +100,7 @@ namespace ThrustBeacon
                     if (!GridMap.TryGetValue(block.CubeGrid, out gridComp))
                         continue;
 
-                    var thruster = block as IMyThrust;
-                    if (thruster != null)
-                    {
-                        gridComp.FatBlockAdded(block);
-                        continue;
-                    }
+                    gridComp.FatBlockAdded(block);
                 }
                 _startBlocks.ClearImmediate();
             }
@@ -133,21 +123,16 @@ namespace ThrustBeacon
         {
             var grid = entity as MyCubeGrid;
             if (grid != null)
-            {
                 grid.AddedToScene += addToStart => _startGrids.Add(grid);
-            }
 
-            var thruster = entity as MyThrust;
-            if (thruster != null)
-            {
-                entity.AddedToScene += addToStart => _startBlocks.Add(thruster);
-            }
+            var slim = entity as IMySlimBlock;
+            if (slim.FatBlock != null)
+                entity.AddedToScene += addToStart => _startBlocks.Add((MyCubeBlock)slim.FatBlock);
         }
 
         private void OnGridClose(IMyEntity entity)
         {
             var grid = entity as MyCubeGrid;
-
             GridComp comp;
             if (GridMap.TryRemove(grid, out comp))
             {

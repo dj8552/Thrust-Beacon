@@ -28,46 +28,32 @@ namespace ThrustBeacon
             IncludeShieldHPInSignal = true,
             DefaultShieldHPDivisor = 50,
         };
-
         [ProtoMember(1)]
         public bool IncludePowerInSignal { get; set; }
-
         [ProtoMember(2)]
         public int DefaultPowerDivisor { get; set; }
-
         [ProtoMember(3)]
         public bool IncludeThrustInSignal { get; set; }
-
         [ProtoMember(4)]
         public int DefaultThrustDivisor { get; set; }
-
         [ProtoMember(5)]
         public float LargeGridCooldownRate { get; set; }
-
         [ProtoMember(6)]
         public float SmallGridCooldownRate { get; set; }
-
         [ProtoMember(7)]
         public bool ShutdownPowerOverMaxSignal { get; set; }
-
         [ProtoMember(8)]
         public double MaxSignalforPowerShutdown { get; set; }
-
         [ProtoMember(9)]
         public bool ShutdownThrustersOverMaxSignal { get; set; }
-
         [ProtoMember(10)]
         public double MaxSignalforThrusterShutdown { get; set; }
-
         [ProtoMember(11)]
         public bool IncludeWeaponHeatInSignal { get; set; }
-        
         [ProtoMember(12)]
         public double DefaultWeaponHeatDivisor { get; set; }
-
         [ProtoMember(13)]
         public bool SendSignalDataToSuits { get; set; }
-
         [ProtoMember(14)]
         public bool IncludeShieldHPInSignal { get; set; }
         [ProtoMember(15)]
@@ -115,7 +101,6 @@ namespace ThrustBeacon
             writer.Close();
             ServerSettings.Instance = settings;
             MyLog.Default.WriteLineAndConsole(ModName + "Saved server config sample");
-
         }
     }
 }

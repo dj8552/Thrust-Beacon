@@ -87,7 +87,6 @@ namespace ThrustBeacon
                 if (func != null)
                     func.EnabledChanged += Func_EnabledChanged;                  
             }
-
         }
 
         //Monitors specialty blocks that alter signal for Enabled changing
@@ -267,9 +266,7 @@ namespace ThrustBeacon
                     Session.powershutdownList.Add(this);
                 }
                 else if (broadcastDist < ss.MaxSignalforPowerShutdown)
-                {
                     Session.powershutdownList.Remove(this);
-                }
 
             }
             if (ss.ShutdownThrustersOverMaxSignal)
@@ -280,13 +277,10 @@ namespace ThrustBeacon
                     Session.thrustshutdownList.Add(this);
                 }
                 else if (broadcastDist < ss.MaxSignalforThrusterShutdown)
-                {
                     Session.thrustshutdownList.Remove(this);
-                }
             }
 
             broadcastDistSqr = (long)broadcastDist * broadcastDist;
-            return;
         }
 
         internal void TogglePower()
