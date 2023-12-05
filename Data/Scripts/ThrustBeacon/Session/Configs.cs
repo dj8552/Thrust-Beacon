@@ -5,6 +5,7 @@ using System.IO;
 using VRage.Utils;
 using VRage.Serialization;
 using System.ComponentModel;
+using System;
 
 namespace ThrustBeacon
 {
@@ -32,23 +33,22 @@ namespace ThrustBeacon
         private void LoadBlockConfigs()
         {
             var Filename = "BlockConfig.cfg";
-            var localFileExists = MyAPIGateway.Utilities.FileExistsInWorldStorage(Filename, typeof(BlockConfig));
-            if (localFileExists)
+            if (MyAPIGateway.Utilities.FileExistsInWorldStorage(Filename, typeof(BlockConfig)))
             {
+                TextReader reader = null;
                 try
                 {
-
-                    TextReader reader = MyAPIGateway.Utilities.ReadFileInWorldStorage(Filename, typeof(BlockConfig));
+                    reader = MyAPIGateway.Utilities.ReadFileInWorldStorage(Filename, typeof(BlockConfig));
                     var configListTemp = MyAPIGateway.Utilities.SerializeFromXML<List<BlockConfig>>(reader.ReadToEnd());
                     reader.Close();
                     foreach (var temp in configListTemp)
                         BlockConfigs.Add(MyStringHash.GetOrCompute(temp.subTypeID), temp);
                     MyLog.Default.WriteLineAndConsole(ModName + $"Loaded {BlockConfigs.Count} blocks from block config");
                 }
-                catch
+                catch (Exception e)
                 {
-                    MyAPIGateway.Utilities.ShowMessage(ModName, "Error reading block configs file, using defaults");
-                    MyLog.Default.WriteLineAndConsole(ModName + "Error reading block configs file, using defaults");
+                    if (reader != null) reader.Close();
+                    MyLog.Default.WriteLineAndConsole(ModName + "Error reading block configs file, using defaults - " + e.InnerException);
                     WriteBlockDefaults();
                 }
             }
@@ -111,23 +111,22 @@ namespace ThrustBeacon
         private void LoadSignalProducerConfigs()
         {
             var Filename = "SignalProducerConfig.cfg";
-            var localFileExists = MyAPIGateway.Utilities.FileExistsInWorldStorage(Filename, typeof(ProducerConfig));
-            if (localFileExists)
+            if (MyAPIGateway.Utilities.FileExistsInWorldStorage(Filename, typeof(ProducerConfig)))
             {
+                TextReader reader = null;
                 try
                 {
-                    TextReader reader = MyAPIGateway.Utilities.ReadFileInWorldStorage(Filename, typeof(ProducerConfig));
+                    reader = MyAPIGateway.Utilities.ReadFileInWorldStorage(Filename, typeof(ProducerConfig));
                     var configListTemp = MyAPIGateway.Utilities.SerializeFromXML<List<ProducerConfig>>(reader.ReadToEnd());
-
                     reader.Close();
                     foreach (var temp in configListTemp)
                         SignalProducer.Add(temp.subTypeID, temp.divisor);
                     MyLog.Default.WriteLineAndConsole(ModName + $"loaded {SignalProducer.Count} signal producers from config");
                 }
-                catch
+                catch (Exception e)
                 {
-                    MyAPIGateway.Utilities.ShowMessage(ModName, "Error reading signal producers file, using defaults");
-                    MyLog.Default.WriteLineAndConsole(ModName + "Error reading signal producers file, using defaults");
+                    if (reader != null) reader.Close();
+                    MyLog.Default.WriteLineAndConsole(ModName + "Error reading signal producers file, using defaults - " + e.InnerException);
                     WriteProducerDefaults();
                 }
             }

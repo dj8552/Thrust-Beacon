@@ -1,5 +1,6 @@
 ﻿using ProtoBuf;
 using Sandbox.ModAPI;
+using System;
 using System.IO;
 using VRage.Utils;
 
@@ -81,12 +82,23 @@ namespace ThrustBeacon
             var localFileExists = MyAPIGateway.Utilities.FileExistsInWorldStorage(Filename, typeof(ServerSettings));
             if(localFileExists)
             {
-                TextReader reader = MyAPIGateway.Utilities.ReadFileInWorldStorage(Filename, typeof(ServerSettings));
-                string text = reader.ReadToEnd();
-                reader.Close();
-                s = MyAPIGateway.Utilities.SerializeFromXML<ServerSettings>(text);
-                ServerSettings.Instance = s;
-                MyLog.Default.WriteLineAndConsole(ModName + "Loaded server config");
+                TextReader reader = null;
+                try
+                {
+                    reader = MyAPIGateway.Utilities.ReadFileInWorldStorage(Filename, typeof(ServerSettings));
+                    string text = reader.ReadToEnd();
+                    reader.Close();
+                    s = MyAPIGateway.Utilities.SerializeFromXML<ServerSettings>(text);
+                    ServerSettings.Instance = s;
+                    MyLog.Default.WriteLineAndConsole(ModName + "Loaded server config");
+                }
+                catch (Exception e)
+                {
+                    if (reader != null) reader.Close();
+                    MyLog.Default.WriteLineAndConsole(ModName + "Server config read error, writing default file - " + e.InnerException);
+                    s = ServerSettings.Default;
+                    SaveServer(s);
+                }
             }
             else
             {
