@@ -111,6 +111,9 @@ namespace ThrustBeacon
                 //Update grid comps to recalc signals on a background thread.  Rand element to make blipping the gas to avoid detection harder
                 foreach (var gridComp in GridList)
                 {
+                    //Skip grid comps without fat blocks
+                    if (gridComp.fatCount == 0)
+                        continue;
                     //Recalc a grid on a rolling random frequency with a max age of 59 ticks
                     //Using 236 in the rand to give an approx 1 in 4 chance of an early update, but no faster than every 15 ticks
                     if ((Tick - gridComp.lastUpdate - 15 > rand.Next(236) || gridComp.specialsDirty || Tick - gridComp.lastUpdate > 59) && !(((uint)gridComp.Grid.Flags & 0x20000000) > 0))
@@ -154,7 +157,7 @@ namespace ThrustBeacon
                         var stealth = ((uint)grid.Grid.Flags & 0x20000000) > 0; //Stealth flag from Ash's mod
                         //TODO Skip concealed grids? any other conditions to skip a grid?
                         var playerGrid = grid.Grid.EntityId == controlledEnt;
-                        if ((!playerGrid && grid.broadcastDist < 2) || stealth) continue;
+                        if ((!playerGrid && grid.broadcastDist < 2) || stealth || grid.fatCount == 0) continue;
                         var gridPos = grid.Grid.PositionComp.WorldAABB.Center;
                         var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
 
