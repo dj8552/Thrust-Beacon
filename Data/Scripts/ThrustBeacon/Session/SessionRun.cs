@@ -146,7 +146,7 @@ namespace ThrustBeacon
                     }
 
                     var playerFaction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(player.IdentityId);
-                    var tempList = new List<SignalComp>();
+                    var validSignalList = new List<SignalComp>();
 
                     //For each player, iterate each grid
                     foreach (var grid in GridList)
@@ -174,26 +174,20 @@ namespace ThrustBeacon
                             }
                             else
                                 signalData.relation = 0;
-                            tempList.Add(signalData);
-
-                            //SP workaround, client level update for MP occurs in PacketBase.Received()
-                            if (!MPActive)
-                            {
-                                if (SignalList.ContainsKey(signalData.entityID))
-                                {
-                                    var updateTuple = new MyTuple<SignalComp, int>(signalData, Tick);
-                                    SignalList[signalData.entityID] = updateTuple;
-                                }
-                                else
-                                    SignalList.TryAdd(signalData.entityID, new MyTuple<SignalComp, int>(signalData, Tick));
-                            }
+                            validSignalList.Add(signalData);
                         }
                     }
-                    //If there's anything to send to the player, fire it off via the Networking
-                    if (MPActive && tempList.Count > 0)
+                    //If there's anything to send to the player, fire it off via the Networking or call the packet received method for SP
+                    if(validSignalList.Count>0)
                     {
-                        Networking.SendToPlayer(new PacketBase(tempList), player.SteamUserId);
-                        aPacketQty++;
+                        var packet = new PacketBase(validSignalList);
+                        if (MPActive)
+                        {
+                            Networking.SendToPlayer(packet, player.SteamUserId);
+                            aPacketQty++;
+                        }
+                        else
+                            packet.Received();
                     }
                 }
 
@@ -213,36 +207,6 @@ namespace ThrustBeacon
                 }
             }
             #endregion
-
-
-            //Clientside list processing to deconflict items shown by WC
-            #region ClientLoop
-            if (Client && Tick % 59 == 0 && Settings.Instance.hideWC)
-            {
-                entityIDList.Clear();
-                var controlledEnt = MyAPIGateway.Session?.Player?.Controller?.ControlledEntity?.Entity?.Parent;
-                if (controlledEnt != null && controlledEnt is MyCubeGrid)
-                {
-                    var myEnt = (MyEntity)controlledEnt;
-                    wcAPI.GetSortedThreats(myEnt, threatList);
-                    foreach (var item in threatList)
-                    {
-                        entityIDList.Add(item.Item1.EntityId);
-                    }
-                    wcAPI.GetObstructions(myEnt, obsList);
-                    foreach (var item in obsList)
-                    {
-                        entityIDList.Add(item.EntityId);
-                    }
-                    foreach (var wcContact in entityIDList)
-                    {
-                        if (SignalList.ContainsKey(wcContact))
-                            SignalList.Remove(wcContact);
-                    }
-                }
-            }
-            #endregion
-
 
             //Shutdown list updates in 5 tick interval to keep players from spamming keys to turn power back on.  Alternative is to register actions when the grid is in the shut down list, then de-register when removed.
             if (Server && Tick % 5 == 0 && powershutdownList.Count > 0)
@@ -362,8 +326,6 @@ namespace ThrustBeacon
             Networking = null;
             PlayerList.Clear();
             SignalList.Clear();
-            threatList.Clear();
-            obsList.Clear();
             powershutdownList.Clear();
             thrustshutdownList.Clear();
         }

@@ -30,7 +30,6 @@ namespace ThrustBeacon
         public Networking Networking = new Networking(1212); //TODO: Pick a new number based on mod ID
         internal MyStringId symbol = MyStringId.GetOrCompute("FrameSignal");
         internal MyStringId symbolOffscreenArrow = MyStringId.GetOrCompute("ArrowOffset");
-
         internal MyStringId symbolOffscreen = MyStringId.GetOrCompute("Arrow");
         internal List<MyStringId> symbolList = new List<MyStringId>(){MyStringId.GetOrCompute("IdleSignal"), MyStringId.GetOrCompute("SmallSignal"), MyStringId.GetOrCompute("MediumSignal"),
         MyStringId.GetOrCompute("LargeSignal"), MyStringId.GetOrCompute("HugeSignal"), MyStringId.GetOrCompute("MassiveSignal"), MyStringId.GetOrCompute("MassiveSignal")}; //TODO unique symbol for overheat/shutdown?
@@ -51,9 +50,7 @@ namespace ThrustBeacon
         internal static readonly Dictionary<MyStringHash, BlockConfig> BlockConfigs = new Dictionary<MyStringHash, BlockConfig>();
         internal List<IMyPlayer> PlayerList = new List<IMyPlayer>();
         internal static ConcurrentDictionary<long, MyTuple<SignalComp, int>> SignalList = new ConcurrentDictionary<long, MyTuple<SignalComp, int>>();
-        internal ICollection<MyTuple<MyEntity, float>> threatList = new List<MyTuple<MyEntity, float>>();
-        internal ICollection<MyEntity> obsList = new List<MyEntity>();
-        internal List<long> entityIDList = new List<long>();
+        internal static List<long> entityIDList = new List<long>();
         internal static List<GridComp> thrustshutdownList = new List<GridComp>();
         internal static List<GridComp> powershutdownList = new List<GridComp>();
         internal static int fadeTimeTicks = 0;
@@ -125,9 +122,9 @@ namespace ThrustBeacon
             if (grid != null)
                 grid.AddedToScene += addToStart => _startGrids.Add(grid);
 
-            var slim = entity as IMySlimBlock;
-            if (slim.FatBlock != null)
-                entity.AddedToScene += addToStart => _startBlocks.Add((MyCubeBlock)slim.FatBlock);
+            var block = entity as MyCubeBlock;
+            if (block != null)
+                entity.AddedToScene += addToStart => _startBlocks.Add(block);
         }
 
         private void OnGridClose(IMyEntity entity)

@@ -146,9 +146,7 @@ namespace ThrustBeacon
                     Session.GridListSpecials[Grid] = this;
             }
             else
-            {
                 Session.GridListSpecials.Remove(Grid);
-            }
 
             specialsDirty = false;
         }
