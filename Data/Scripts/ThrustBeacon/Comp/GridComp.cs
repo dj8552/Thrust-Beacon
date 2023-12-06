@@ -2,7 +2,6 @@
 using Sandbox.ModAPI;
 using System.Collections.Generic;
 using VRage.Game.Entity;
-using VRage.Game.ModAPI;
 
 namespace ThrustBeacon
 {
@@ -59,24 +58,18 @@ namespace ThrustBeacon
             {
                 int divisor;
                 if (!Session.SignalProducer.TryGetValue(subTypeID.ToString(), out divisor))
-                {
                     divisor = ServerSettings.Instance.DefaultPowerDivisor;
-                }
                 powerList.Add(power, divisor);
             }
             else if (thruster != null)
             {
                 int divisor;
                 if (!Session.SignalProducer.TryGetValue(subTypeID.ToString(), out divisor))
-                {
                     divisor = ServerSettings.Instance.DefaultThrustDivisor;
-                }
                 thrustList.Add(thruster, divisor);
             }
             else if (weapon)
-            {
                 weaponList.Add(block);
-            }
 
             //Checks if the block is a specialty one that alters signal
             if (Session.BlockConfigs.ContainsKey(subTypeID))
