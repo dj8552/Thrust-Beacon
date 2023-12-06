@@ -25,7 +25,7 @@ namespace ThrustBeacon
         internal float detectionRange = 0f;
         internal bool specialsDirty = false;
         internal int lastUpdate = 0;
-        internal int fatCount = 0;
+        internal int funcCount = 0;
         
         internal void Init(MyCubeGrid grid)
         {
@@ -81,7 +81,9 @@ namespace ThrustBeacon
                 if (func != null)
                     func.EnabledChanged += Func_EnabledChanged;                  
             }
-            fatCount++;
+
+            if(block is IMyFunctionalBlock)
+                funcCount++;
         }
 
         //Monitors specialty blocks that alter signal for Enabled changing
@@ -110,7 +112,8 @@ namespace ThrustBeacon
                 if (func != null)
                     func.EnabledChanged -= Func_EnabledChanged;
             }
-            fatCount--;
+            if (block is IMyFunctionalBlock)
+                funcCount--;
         }
 
         //Update modifiers from specialty blocks
