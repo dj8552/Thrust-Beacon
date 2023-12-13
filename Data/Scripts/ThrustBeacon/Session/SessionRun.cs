@@ -1,14 +1,10 @@
 ﻿using CoreSystems.Api;
 using Digi.Example_NetworkProtobuf;
 using Draygo.API;
-using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using VRage;
 using VRage.Game.Components;
-using VRage.Game.Entity;
 using VRage.Utils;
 using VRageMath;
 using VRage.Game.ModAPI;
@@ -22,6 +18,16 @@ namespace ThrustBeacon
         public override void BeforeStart()
         {
             Networking.Register();
+            if (Server)
+            {
+                //Register group actions and init existing groups
+                MyAPIGateway.GridGroups.OnGridGroupCreated += GridGroupsOnOnGridGroupCreated;
+                MyAPIGateway.GridGroups.OnGridGroupDestroyed += GridGroupsOnOnGridGroupDestroyed;
+                var groupStartList = new List<IMyGridGroupData>();
+                MyAPIGateway.GridGroups.GetGridGroups(GridLinkTypeEnum.Mechanical, groupStartList);
+                foreach(var group in groupStartList)
+                    GridGroupsOnOnGridGroupCreated(group);
+            }
         }
         public override void LoadData()
         {
@@ -40,7 +46,6 @@ namespace ThrustBeacon
             {
                 dsAPI = new ShieldApi();
                 dsAPI.Load();
-                MyEntities.OnEntityCreate += OnEntityCreate;
                 LoadSignalProducerConfigs(); //Blocks that generate signal (thrust, power)
                 LoadBlockConfigs(); //Blocks that alter targeting
                 InitServerConfig(); //Overall settings
@@ -54,6 +59,7 @@ namespace ThrustBeacon
                     weaponSubtypeIDs.Add(def.SubtypeId);
                     MyLog.Default.WriteLineAndConsole(ModName + $"Registered {weaponSubtypeIDs.Count} weapon block types");
                 }
+
             }
         }
 
@@ -89,12 +95,8 @@ namespace ThrustBeacon
 
             //Server timed updates
             #region ServerUpdates
-            if (Server && Tick % 59 == 0)
+            if (Server && Tick % 300 == 0)
             {
-                //Init action to capture existing grids/blocks
-                if ((!_startBlocks.IsEmpty || !_startGrids.IsEmpty))
-                    StartComps();
-
                 //Find player controlled entities in range and broadcast to them
                 PlayerList.Clear();
                 if (MPActive)
@@ -109,15 +111,15 @@ namespace ThrustBeacon
             if (Server)
             {
                 //Update grid comps to recalc signals on a background thread.  Rand element to make blipping the gas to avoid detection harder
-                foreach (var gridComp in GridList)
+                foreach (var group in GroupDict.Values)
                 {
                     //Skip grid comps without fat blocks
-                    if (gridComp.funcCount == 0)
+                    if (group.groupFuncCount == 0)
                         continue;
                     //Recalc a grid on a rolling random frequency with a max age of 59 ticks
                     //Using 236 in the rand to give an approx 1 in 4 chance of an early update, but no faster than every 15 ticks
-                    if ((Tick - gridComp.lastUpdate - 15 > rand.Next(236) || gridComp.specialsDirty || Tick - gridComp.lastUpdate > 59) && !(((uint)gridComp.Grid.Flags & 0x20000000) > 0))
-                        MyAPIGateway.Parallel.StartBackground(gridComp.CalcSignal);
+                    if (Tick - group.groupLastUpdate - 15 > rand.Next(236) || group.groupSpecialsDirty || Tick - group.groupLastUpdate > 59)
+                        MyAPIGateway.Parallel.StartBackground(group.UpdateGroup);
                 }
 
                 //Update players if the last 2 digits of their identity ID = tick % 100 to spread out network updates.  If 100 ticks is too long, div by 2
@@ -135,48 +137,48 @@ namespace ThrustBeacon
                         MyLog.Default.WriteLineAndConsole(ModName + $"Player position error - Vector3D.Zero - player.Name: {player.DisplayName} - player.SteamUserId: {player.SteamUserId}");
                         continue;
                     }
-                    aPlayerQty++;
+
                     //Pull modifiers for current players grid (IE if it has increased detection range)
-                    var controlledEnt = player.Controller?.ControlledEntity?.Entity?.Parent?.EntityId;
-                    var block = player.Controller?.ControlledEntity?.Entity as IMyCubeBlock;
-                    GridComp playerComp = null;
+                    var controlledGrid = (IMyCubeGrid)player.Controller?.ControlledEntity?.Entity?.Parent;
                     var playerGridDetectionModSqr = 0f;
-                    if (block != null && GridListSpecials.TryGetValue(block.CubeGrid, out playerComp))
+                    if (controlledGrid != null)
                     {
-                        playerGridDetectionModSqr = playerComp.detectionRange * playerComp.detectionRange;
-                        if (playerComp.detectionRange < 0)
-                            playerGridDetectionModSqr *= -1;
+                        var playerComp = GroupDict[controlledGrid.GetGridGroup(GridLinkTypeEnum.Mechanical)];
+                            playerGridDetectionModSqr = playerComp.groupDetectionRange * playerComp.groupDetectionRange;
+                            if (playerComp.groupDetectionRange < 0)
+                                playerGridDetectionModSqr *= -1;
                     }
 
                     var playerFaction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(player.IdentityId);
                     var validSignalList = new List<SignalComp>();
 
                     //For each player, iterate each grid
-                    foreach (var grid in GridList)
+                    foreach (var group in GroupDict.Values)
                     {
-                        var stealth = ((uint)grid.Grid.Flags & 0x20000000) > 0; //Stealth flag from Ash's mod
-                        //TODO Skip concealed grids? any other conditions to skip a grid?
-                        var playerGrid = grid.Grid.EntityId == controlledEnt;
-                        if ((!playerGrid && grid.broadcastDist < 2) || stealth || grid.funcCount == 0) continue;
-                        var gridPos = grid.Grid.PositionComp.WorldAABB.Center;
+                        var stealth = false;//((uint)grid.Grid.Flags & 0x20000000) > 0; //Stealth flag from Ash's mod
+                        var playerGrid = controlledGrid == null ?  false : group.GridDict.ContainsKey(controlledGrid);
+
+
+                        if ((!playerGrid && group.groupBroadcastDist < 2) || stealth || group.groupFuncCount == 0) continue;
+                        var gridPos = group.groupSphere.Center;
                         var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
 
                         //Check if current grid is in detection range of the player
-                        if (playerGrid || distToTargSqr <= grid.broadcastDistSqr + playerGridDetectionModSqr)
+                        if (playerGrid || distToTargSqr <= group.groupBroadcastDistSqr + playerGridDetectionModSqr)
                         {
                             var signalData = new SignalComp();
                             signalData.position = (Vector3I)gridPos;
-                            signalData.range = playerGrid ? grid.broadcastDist : (int)Math.Sqrt(distToTargSqr);
-                            signalData.faction = grid.faction;
-                            signalData.entityID = grid.Grid.EntityId;
-                            signalData.sizeEnum = grid.sizeEnum;
+                            signalData.range = playerGrid ? group.groupBroadcastDist : (int)Math.Sqrt(distToTargSqr);
+                            signalData.faction = group.groupFaction;
+                            signalData.entityID = playerGrid ? controlledGrid.EntityId : group.GetHashCode();
+                            signalData.sizeEnum = group.groupSizeEnum;
                             if (!playerGrid && playerFaction != null)
                             {
-                                var relation = MyAPIGateway.Session.Factions.GetRelationBetweenFactions(playerFaction.FactionId, grid.factionID);
+                                var relation = MyAPIGateway.Session.Factions.GetRelationBetweenFactions(playerFaction.FactionId, group.groupFactionID);
                                 signalData.relation = (byte)relation;
                             }
                             else
-                                signalData.relation = 0;
+                                signalData.relation = 1;
                             validSignalList.Add(signalData);
                         }
                     }
@@ -185,135 +187,38 @@ namespace ThrustBeacon
                     {
                         var packet = new PacketBase(validSignalList);
                         if (MPActive)
-                        {
                             Networking.SendToPlayer(packet, player.SteamUserId);
-                            aPacketQty++;
-                        }
                         else
                             packet.Received();
                     }
                 }
-
-                //Analytics logging
-                if(Tick > aLastLog + aLogTime)
-                {
-                    MyLog.Default.WriteLineAndConsole(ModName + $"Analytics:\n" +
-                        $"GridComp CalcSignal calls - {aUpdateQty} - avg ticks between updates - {aUpdateTime / aUpdateQty}\n" +
-                        $"Player iterations - {aPlayerQty} - Packets sent - {aPacketQty}");
-
-                    aPacketQty = 0;
-                    aPlayerQty = 0;
-                    aUpdateQty = 0;
-                    aUpdateTime = 0;
-
-                    aLastLog = Tick;
-                }
             }
             #endregion
 
-            //Shutdown list updates in 5 tick interval to keep players from spamming keys to turn power back on.  Alternative is to register actions when the grid is in the shut down list, then de-register when removed.
+            //Shutdown list updates in 5 tick interval to keep players from spamming keys to turn power back on.
+            //Alternative is to register actions when the grid is in the shut down list, then de-register when removed.
             if (Server && Tick % 5 == 0 && powershutdownList.Count > 0)
             {
-                foreach (var gridComp in powershutdownList.ToArray())
-                    gridComp.TogglePower();
+                foreach (var groupComp in powershutdownList.ToArray())
+                    groupComp.TogglePower();
             }
             if (Server && Tick % 5 == 0 && thrustshutdownList.Count > 0)
             {
-                foreach (var gridComp in thrustshutdownList.ToArray())
-                    gridComp.ToggleThrust();
+                foreach (var groupComp in thrustshutdownList.ToArray())
+                    groupComp.ToggleThrust();
             }
 
-        }
-
-        //Main clientside loop for visuals
-        public override void Draw()
-        {
-            if (Client && hudAPI.Heartbeat && SignalList.Count > 0 && MyAPIGateway.Session.Config.HudState != 0 && !MyAPIGateway.Gui.IsCursorVisible)
-            {
-                var s = Settings.Instance;
-                var viewProjectionMat = Session.Camera.ViewMatrix * Session.Camera.ProjectionMatrix;
-                var camPos = Session.Camera.Position;
-                var playerEnt = MyAPIGateway.Session?.Player?.Controller?.ControlledEntity?.Entity?.Parent?.EntityId;
-
-                //Draw main signal list
-                foreach (var signal in SignalList.ToArray())
-                {
-                    var contact = signal.Value.Item1;
-
-                    //Signal for own occupied grid
-                    if (contact.entityID == playerEnt)
-                    {
-                        var dispRange = contact.range > 1000 ? (contact.range / 1000f).ToString("0.#") + " km" : contact.range + " m";
-                        var info = new StringBuilder("Broadcast Dist: " + dispRange + "\n" + "Size: " + messageList[contact.sizeEnum]);
-                        var Label = new HudAPIv2.HUDMessage(info, s.signalDrawCoords, null, 2, s.textSizeOwn, true, true);
-                        Label.Visible = true;
-                    }
-                    //Other grid signals received from server
-                    else
-                    {
-                        var contactAge = Tick - signal.Value.Item2;
-                        if (contactAge >= stopDisplayTimeTicks)
-                        {
-                            if (contactAge >= keepTimeTicks)
-                                SignalList.Remove(signal.Key);
-                            continue;
-                        }
-                        float distance = Vector3.Distance(contact.position, camPos);
-                        if (distance < s.hideDistance) continue;
-
-                        var baseColor = contact.relation == 1 ? s.enemyColor : contact.relation == 3 ? s.friendColor : s.neutralColor;
-                        var adjColor = baseColor;
-                        if (fadeTimeTicks > 0)
-                        {
-                            byte colorFade = (byte)(contactAge < fadeTimeTicks ? 0 : (contactAge - fadeTimeTicks) / 2);
-                            adjColor.R = (byte)MathHelper.Clamp(baseColor.R - colorFade, 0, 255);
-                            adjColor.G = (byte)MathHelper.Clamp(baseColor.G - colorFade, 0, 255);
-                            adjColor.B = (byte)MathHelper.Clamp(baseColor.B - colorFade, 0, 255);
-                        }
-
-                        var adjustedPos = camPos + Vector3D.Normalize((Vector3D)contact.position - camPos) * viewDist;
-                        var screenCoords = Vector3D.Transform(adjustedPos, viewProjectionMat);
-                        var offScreen = screenCoords.X > 1 || screenCoords.X < -1 || screenCoords.Y > 1 || screenCoords.Y < -1 || screenCoords.Z > 1;
-
-                        //Draw symbol on grid with text
-                        if (!offScreen) 
-                        {
-                            var symbolPosition = new Vector2D(screenCoords.X, screenCoords.Y);
-                            var labelPosition = new Vector2D(screenCoords.X + (s.symbolWidth * 0.25), screenCoords.Y + (symbolHeight * 0.4));
-                            var dispRange = distance > 1000 ? (distance / 1000).ToString("0.#") + " km" : distance.ToString("0.#") + " m";
-                            //var dispSize = contact.range > 1000 ? (contact.range / 1000).ToString("0.#") + " km" : contact.range.ToString("0.#") + " m";
-                            //var info = new StringBuilder(contact.faction + " " + dispSize + " sig " + "\n" + dispRange); //Testing alternate display
-                            var info = new StringBuilder(contact.faction + messageList[contact.sizeEnum] + "\n" + dispRange);
-                            var Label = new HudAPIv2.HUDMessage(info, labelPosition, new Vector2D(0, -0.001), 2, s.textSize, true, true);
-                            Label.InitialColor = adjColor;
-                            Label.Visible = true;
-                            var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbolList[contact.sizeEnum], symbolPosition, adjColor, Width: s.symbolWidth, Height: symbolHeight, TimeToLive: 2, HideHud: true, Shadowing: true);
-                        }
-                        //Draw off screen indicators and arrows
-                        else
-                        {
-                            if (screenCoords.Z > 1)//Camera is between player and target
-                                screenCoords *= -1;
-                            var vectorToPt = new Vector2D(screenCoords.X, screenCoords.Y);
-                            vectorToPt.Normalize();
-                            vectorToPt *= offscreenSquish; //This flattens the Y axis so symbols don't overlap the hotbar and brings the X closer in
-                            var rotation = (float)Math.Atan2(screenCoords.X, screenCoords.Y);
-                            var symbolObj = new HudAPIv2.BillBoardHUDMessage(symbolOffscreenArrow, vectorToPt, adjColor, Width: s.offscreenWidth * 0.75f, Height: offscreenHeight, TimeToLive: 2, Rotation: rotation, HideHud: true, Shadowing: true);
-                            var symbolObj2 = new HudAPIv2.BillBoardHUDMessage(symbolList[contact.sizeEnum], vectorToPt, adjColor, Width: s.symbolWidth, Height: symbolHeight, TimeToLive: 2, HideHud: true, Shadowing: true);
-                        }
-                    }
-                }
-            }
         }
 
         protected override void UnloadData()
         {
             if (Server)
             {
-                MyEntities.OnEntityCreate -= OnEntityCreate;       
                 Clean();
                 if (dsAPI != null)
                     dsAPI.Unload();
+                MyAPIGateway.GridGroups.OnGridGroupCreated -= GridGroupsOnOnGridGroupCreated;
+                MyAPIGateway.GridGroups.OnGridGroupDestroyed -= GridGroupsOnOnGridGroupDestroyed;
             }
             if(Client)
             {

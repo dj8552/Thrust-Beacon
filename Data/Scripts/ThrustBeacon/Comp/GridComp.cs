@@ -2,6 +2,7 @@
 using Sandbox.ModAPI;
 using System.Collections.Generic;
 using VRage.Game.Entity;
+using VRage.Game.ModAPI;
 
 namespace ThrustBeacon
 {
@@ -12,41 +13,49 @@ namespace ThrustBeacon
         internal Dictionary<IMyPowerProducer, int> powerList = new Dictionary<IMyPowerProducer, int>();
         internal List<MyEntity> weaponList = new List<MyEntity>();
         internal List<MyCubeBlock> specials = new List<MyCubeBlock>();
+        internal IMyGridGroupData group;
 
         internal int broadcastDist;
         internal int broadcastDistOld;
-        internal long broadcastDistSqr;
-        internal string faction = "";
         internal long factionID = 0;
         internal VRage.Game.MyCubeSize gridSize;
-        internal byte sizeEnum;
         internal float coolDownRate = 0f;
         internal float signalRange = 0f;
         internal float detectionRange = 0f;
         internal bool specialsDirty = false;
-        internal int lastUpdate = 0;
         internal int funcCount = 0;
         
-        internal void Init(MyCubeGrid grid)
+        internal void Init(MyCubeGrid grid, IMyGridGroupData myGroup)
         {
+            group = myGroup;
             Grid = grid;
             Grid.OnFatBlockAdded += FatBlockAdded;
             Grid.OnFatBlockRemoved += FatBlockRemoved;
+            Grid.OnBlockOwnershipChanged += OnBlockOwnershipChanged;
             gridSize = Grid.GridSizeEnum;
+            foreach (var fat in Grid.GetFatBlocks())
+            {
+                FatBlockAdded(fat);
+            }
             RecalcSpecials();
+        }
+
+        private void OnBlockOwnershipChanged(MyCubeGrid grid)
+        {
+            if (grid.BigOwners != null && grid.BigOwners.Count > 0)
+            {
+                var faction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(grid.BigOwners[0]);
+                factionID = faction == null ? 0 : faction.FactionId;
+            }
         }
 
         internal void FatBlockAdded(MyCubeBlock block)
         {
             //Ownership update
-            if(block.CubeGrid.BigOwners != null && block.CubeGrid.BigOwners.Count > 0)
+            if (block.CubeGrid.BigOwners != null && block.CubeGrid.BigOwners.Count > 0)
             {
-                var curFaction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(block.CubeGrid.BigOwners[0]);
-                if (curFaction != null)
-                {
-                    faction = curFaction.Tag + ".";
-                    factionID = curFaction.FactionId;
-                }
+                var faction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(block.CubeGrid.BigOwners[0]);
+                factionID = faction == null ? 0 : faction.FactionId;
             }
 
             var subTypeID = block.BlockDefinition.Id.SubtypeId;
@@ -82,14 +91,20 @@ namespace ThrustBeacon
                     func.EnabledChanged += Func_EnabledChanged;                  
             }
 
-            if(block is IMyFunctionalBlock)
+            //Functional count, rolls up to the group and is used in weighing the largest faction
+            if (block is IMyFunctionalBlock)
+            {
                 funcCount++;
+                if (Session.GroupDict.ContainsKey(group))
+                    Session.GroupDict[group].groupFuncCount++;
+            }
         }
 
         //Monitors specialty blocks that alter signal for Enabled changing
         private void Func_EnabledChanged(IMyTerminalBlock obj)
         {
             specialsDirty = true;
+            Session.GroupDict[group].groupSpecialsDirty = true;
         }
 
         internal void FatBlockRemoved(MyCubeBlock block)
@@ -113,7 +128,11 @@ namespace ThrustBeacon
                     func.EnabledChanged -= Func_EnabledChanged;
             }
             if (block is IMyFunctionalBlock)
+            {
                 funcCount--;
+                if(Session.GroupDict.ContainsKey(group))
+                    Session.GroupDict[group].groupFuncCount--;
+            }
         }
 
         //Update modifiers from specialty blocks
@@ -136,21 +155,10 @@ namespace ThrustBeacon
                 detectionRange += cfg.DetectionRange;
                 signalRange += cfg.SignalRange;
             }
-
-            if(specials.Count > 0)
-            {
-                if (!Session.GridListSpecials.ContainsKey(Grid))
-                    Session.GridListSpecials.Add(Grid, this);
-                else
-                    Session.GridListSpecials[Grid] = this;
-            }
-            else
-                Session.GridListSpecials.Remove(Grid);
-
             specialsDirty = false;
         }
 
-        //Called by the server to refresh the signal output before checking it against clients in range
+        //Called by the group to refresh the signal output
         internal void CalcSignal()
         {
             var ss = ServerSettings.Instance;
@@ -211,7 +219,7 @@ namespace ThrustBeacon
             if (broadcastDistOld > broadcastDist || Grid.IsStatic)
             {
                 //Reworked cooldown to normalize to a per second value, since recalcs are on a variable schedule
-                var partialCoolDown = (broadcastDistOld - broadcastDistOld * coolDownRate) * ((float)(Session.Tick - lastUpdate) / 59);
+                var partialCoolDown = (broadcastDistOld - broadcastDistOld * coolDownRate) * ((float)(Session.Tick - Session.GroupDict[group].groupLastUpdate) / 59);
                 broadcastDist = (int)(broadcastDistOld - partialCoolDown);
                 
                 if (broadcastDist <= 1)
@@ -220,62 +228,6 @@ namespace ThrustBeacon
 
             //SignalRange increase from specials
             broadcastDist += (int)signalRange;
-
-            //TODO roll these categories to server settings?
-            if (broadcastDist < 2500)//Idle
-            {
-                sizeEnum = 0;
-            }
-            else if (broadcastDist < 100000)//Small
-            {
-                sizeEnum = 1;
-            }
-            else if (broadcastDist < 200000)//Medium
-            {
-                sizeEnum = 2;
-            }
-            else if (broadcastDist < 300000)//Large
-            {
-                sizeEnum = 3;
-            }
-            else if (broadcastDist < 400000)//Huge
-            {
-                sizeEnum = 4;
-            }
-            else//Massive
-            {
-                sizeEnum = 5;
-            }
-
-            //Analytics and time updates
-            Session.aUpdateQty++;
-            Session.aUpdateTime += Session.Tick - lastUpdate;
-            lastUpdate = Session.Tick;
-
-            //Shutdown condition checks
-            if (ss.ShutdownPowerOverMaxSignal)
-            {
-                if (broadcastDist >= ss.MaxSignalforPowerShutdown)
-                {
-                    sizeEnum = 6;
-                    Session.powershutdownList.Add(this);
-                }
-                else if (broadcastDist < ss.MaxSignalforPowerShutdown)
-                    Session.powershutdownList.Remove(this);
-
-            }
-            if (ss.ShutdownThrustersOverMaxSignal)
-            {
-                if (broadcastDist >= ss.MaxSignalforThrusterShutdown)
-                {
-                    sizeEnum = 6;
-                    Session.thrustshutdownList.Add(this);
-                }
-                else if (broadcastDist < ss.MaxSignalforThrusterShutdown)
-                    Session.thrustshutdownList.Remove(this);
-            }
-
-            broadcastDistSqr = (long)broadcastDist * broadcastDist;
         }
 
         internal void TogglePower()
@@ -295,6 +247,8 @@ namespace ThrustBeacon
         {
             Grid.OnFatBlockAdded -= FatBlockAdded;
             Grid.OnFatBlockRemoved -= FatBlockRemoved;
+            Grid.OnBlockOwnershipChanged -= OnBlockOwnershipChanged;
+
             Grid = null;
             thrustList.Clear();
             powerList.Clear();
@@ -306,7 +260,6 @@ namespace ThrustBeacon
             }
             specials.Clear();
             broadcastDist = 0;
-            broadcastDistSqr = 0;
         }
     }
 }

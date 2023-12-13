@@ -67,6 +67,7 @@ namespace ThrustBeacon
         
         [ProtoMember(13)]
         public int hideDistance { get; set; }
+
         [ProtoMember(14)]
         public bool hideWC { get; set; }
 
@@ -283,7 +284,6 @@ namespace ThrustBeacon
             FadeTime.Text = "Fade out after " + Settings.Instance.fadeOutTime + " seconds";
             HideDist.Text = "Hide signals within " + Settings.Instance.hideDistance + "m";
         }
-
     }
 }
 
