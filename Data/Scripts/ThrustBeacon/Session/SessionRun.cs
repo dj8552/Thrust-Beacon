@@ -217,8 +217,13 @@ namespace ThrustBeacon
                 Clean();
                 if (dsAPI != null)
                     dsAPI.Unload();
-                MyAPIGateway.GridGroups.OnGridGroupCreated -= GridGroupsOnOnGridGroupCreated;
-                MyAPIGateway.GridGroups.OnGridGroupDestroyed -= GridGroupsOnOnGridGroupDestroyed;
+                try //Because this throws a NRE in keen code if you alt-F4
+                {
+                    MyAPIGateway.GridGroups.OnGridGroupCreated -= GridGroupsOnOnGridGroupCreated;
+                    MyAPIGateway.GridGroups.OnGridGroupDestroyed -= GridGroupsOnOnGridGroupDestroyed;
+                }
+                catch { }
+                
             }
             if(Client)
             {
