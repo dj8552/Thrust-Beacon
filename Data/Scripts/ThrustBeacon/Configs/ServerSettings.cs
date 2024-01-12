@@ -1,6 +1,8 @@
 ﻿using ProtoBuf;
 using Sandbox.ModAPI;
 using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using VRage.Utils;
 
@@ -58,6 +60,31 @@ namespace ThrustBeacon
         public bool IncludeShieldHPInSignal { get; set; }
         [ProtoMember(15)]
         public int DefaultShieldHPDivisor { get; set; }
+        [ProtoMember(16)]
+        public int Distance1 { get; set; } = 2500;
+        [ProtoMember(17)]
+        public int Distance2 { get; set; } = 100000;
+        [ProtoMember(18)]
+        public int Distance3 { get; set; } = 200000;
+        [ProtoMember(19)]
+        public int Distance4 { get; set; } = 300000;
+        [ProtoMember(20)]
+        public int Distance5 { get; set; } = 400000;
+        [ProtoMember(21)]
+        public string Label1 { get; set; } = "Idle Sig";
+        [ProtoMember(22)]
+        public string Label2 { get; set; } = "Small Sig";
+        [ProtoMember(23)]
+        public string Label3 { get; set; } = "Medium Sig";
+        [ProtoMember(24)]
+        public string Label4 { get; set; } = "Large Sig";
+        [ProtoMember(25)]
+        public string Label5 { get; set; } = "Huge Sig";
+        [ProtoMember(26)]
+        public string Label6 { get; set; } = "Massive Sig";
+        [ProtoMember(27)]
+        public string LabelShutdown { get; set; } = "OVERHEAT - SHUTDOWN";
+
     }
     public partial class Session
     {
@@ -77,6 +104,7 @@ namespace ThrustBeacon
                     s = MyAPIGateway.Utilities.SerializeFromXML<ServerSettings>(text);
                     ServerSettings.Instance = s;
                     MyLog.Default.WriteLineAndConsole(ModName + "Loaded server config");
+                    SaveServer(ServerSettings.Instance);
                 }
                 catch (Exception e)
                 {
@@ -94,13 +122,14 @@ namespace ThrustBeacon
         }
         public void SaveServer(ServerSettings settings)
         {
+            messageList = new List<string>() {settings.Label1, settings.Label2, settings.Label3, settings.Label4, settings.Label5, settings.Label6, settings.LabelShutdown};
             var Filename = "ServerConfig.cfg";
             TextWriter writer;
             writer = MyAPIGateway.Utilities.WriteFileInWorldStorage(Filename, typeof(ServerSettings));
             writer.Write(MyAPIGateway.Utilities.SerializeToXML(settings));
             writer.Close();
             ServerSettings.Instance = settings;
-            MyLog.Default.WriteLineAndConsole(ModName + "Saved server config sample");
+            MyLog.Default.WriteLineAndConsole(ModName + "Saved server config");
         }
     }
 }

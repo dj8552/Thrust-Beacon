@@ -1,27 +1,36 @@
-﻿using CoreSystems.Api;
-using DefenseShields;
-using Digi.Example_NetworkProtobuf;
-using Draygo.API;
-using Sandbox.Game.Entities;
+﻿using Digi.Example_NetworkProtobuf;
 using Sandbox.ModAPI;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Data;
-using VRage;
-using VRage.Collections;
 using VRage.Game.Components;
-using VRage.Game.Entity;
 using VRage.Game.ModAPI;
-using VRage.Groups;
-using VRage.ModAPI;
 using VRage.Utils;
-using VRageMath;
+
 
 namespace ThrustBeacon
 {
     public partial class Session : MySessionComponentBase
     {
+        //Send newly connected clients server-specific data (label text)
+        private void PlayerConnected(long playerId)
+        {
+            MyLog.Default.WriteLineAndConsole($"{ModName}: Player connected " + playerId);
+            var steamId = MyAPIGateway.Multiplayer.Players.TryGetSteamId(playerId);
+            if (steamId != 0)
+            {
+                Networking.SendToPlayer(new PacketSettings(messageList), steamId);
+                MyLog.Default.WriteLineAndConsole($"{ModName}: Sent settings to player " + steamId);
+            }
+            else
+                MyLog.Default.WriteLineAndConsole($"{ModName}: Failed to find steam ID for playerId " + playerId);
+        }
+
+        //Dump current signals when hopping out of a grid
+        private void GridChange(VRage.Game.ModAPI.Interfaces.IMyControllableEntity previousEnt, VRage.Game.ModAPI.Interfaces.IMyControllableEntity newEnt)
+        {
+            if (newEnt is IMyCharacter)
+            {
+                SignalList.Clear();
+            }
+        }
         private void GridGroupsOnOnGridGroupCreated(IMyGridGroupData group)
         {
             if (group.LinkType != GridLinkTypeEnum.Mechanical)

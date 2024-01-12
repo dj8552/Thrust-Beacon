@@ -1,25 +1,40 @@
-﻿using CoreSystems.Api;
-using ProtoBuf;
+﻿using ProtoBuf;
 using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
 using System.Collections.Generic;
 using ThrustBeacon;
 using VRage;
 using VRage.Game.Entity;
+using VRage.Utils;
 
 namespace Digi.Example_NetworkProtobuf
 {
+    [ProtoInclude(1000, typeof(PacketSettings))]
+    [ProtoInclude(2000, typeof(PacketSignals))]
     [ProtoContract]
-    public class PacketBase
+    public abstract class PacketBase
     {
-        [ProtoMember(1)]
-        public List<SignalComp> signalData;
+        //[ProtoMember(1)]
+        //public ulong SenderId;
         public PacketBase() { } // Empty constructor required for deserialization
-        public PacketBase(List<SignalComp> signaldata)
+        //public PacketBase()
+        //{
+        //    SenderId = MyAPIGateway.Multiplayer.MyId;
+        //}
+        public abstract bool Received();
+    }
+
+    [ProtoContract]
+    public partial class PacketSignals : PacketBase
+    {
+        [ProtoMember(100)]
+        public List<SignalComp> signalData;
+        public PacketSignals() { } // Empty constructor required for deserialization
+        public PacketSignals(List<SignalComp> signaldata)
         {
             signalData = signaldata;
         }
-        public void Received()
+        public override bool Received()
         {
             //Clientside list processing to deconflict items shown by WC Radar
             if (Settings.Instance.hideWC)
@@ -61,6 +76,26 @@ namespace Digi.Example_NetworkProtobuf
                     Session.SignalList.TryAdd(signalRcvd.entityID, new MyTuple<SignalComp, int>(signalRcvd, Session.Tick));
                 }
             }
+
+            return false;
+        }
+    }
+
+    [ProtoContract]
+    public partial class PacketSettings : PacketBase
+    {
+        [ProtoMember(200)]
+        public List<string> Labels;
+        public PacketSettings() { } // Empty constructor required for deserialization
+        public PacketSettings(List<string> labels)
+        {
+            Labels = labels;
+        }
+        public override bool Received()
+        {
+            Session.messageList = Labels;
+            MyLog.Default.WriteLineAndConsole($"{Session.ModName}: Received server label list");
+            return false;
         }
     }
 }

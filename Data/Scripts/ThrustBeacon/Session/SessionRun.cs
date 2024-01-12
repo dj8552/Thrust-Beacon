@@ -9,6 +9,7 @@ using VRage.Utils;
 using VRageMath;
 using VRage.Game.ModAPI;
 using DefenseShields;
+using Sandbox.Game;
 
 namespace ThrustBeacon
 {
@@ -27,6 +28,9 @@ namespace ThrustBeacon
                 MyAPIGateway.GridGroups.GetGridGroups(GridLinkTypeEnum.Mechanical, groupStartList);
                 foreach(var group in groupStartList)
                     GridGroupsOnOnGridGroupCreated(group);
+
+                //Hook connection event to send label list
+                MyVisualScriptLogicProvider.PlayerConnected += PlayerConnected;
             }
         }
         public override void LoadData()
@@ -49,26 +53,6 @@ namespace ThrustBeacon
                 LoadSignalProducerConfigs(); //Blocks that generate signal (thrust, power)
                 LoadBlockConfigs(); //Blocks that alter targeting
                 InitServerConfig(); //Overall settings
-
-                //Roll subtype IDs of all WC weapons into a hash set
-                List<VRage.Game.MyDefinitionId> tempWeaponDefs = new List<VRage.Game.MyDefinitionId>();               
-                if(wcAPI != null) 
-                    wcAPI.GetAllCoreWeapons(tempWeaponDefs);
-                foreach (var def in tempWeaponDefs)
-                {
-                    weaponSubtypeIDs.Add(def.SubtypeId);
-                    MyLog.Default.WriteLineAndConsole(ModName + $"Registered {weaponSubtypeIDs.Count} weapon block types");
-                }
-
-            }
-        }
-
-        //Dump current signals when hopping out of a grid
-        private void GridChange(VRage.Game.ModAPI.Interfaces.IMyControllableEntity previousEnt, VRage.Game.ModAPI.Interfaces.IMyControllableEntity newEnt)
-        {
-            if (newEnt is IMyCharacter)
-            {
-                SignalList.Clear();
             }
         }
 
@@ -157,8 +141,6 @@ namespace ThrustBeacon
                     {
                         var stealth = false;//((uint)grid.Grid.Flags & 0x20000000) > 0; //Stealth flag from Ash's mod
                         var playerGrid = controlledGrid == null ?  false : group.GridDict.ContainsKey(controlledGrid);
-
-
                         if ((!playerGrid && group.groupBroadcastDist < 2) || stealth || group.groupFuncCount == 0) continue;
                         var gridPos = group.groupSphere.Center;
                         var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
@@ -185,7 +167,7 @@ namespace ThrustBeacon
                     //If there's anything to send to the player, fire it off via the Networking or call the packet received method for SP
                     if(validSignalList.Count>0)
                     {
-                        var packet = new PacketBase(validSignalList);
+                        var packet = new PacketSignals(validSignalList);
                         if (MPActive)
                             Networking.SendToPlayer(packet, player.SteamUserId);
                         else
@@ -223,9 +205,9 @@ namespace ThrustBeacon
                     MyAPIGateway.GridGroups.OnGridGroupDestroyed -= GridGroupsOnOnGridGroupDestroyed;
                 }
                 catch { }
-                
+                MyVisualScriptLogicProvider.PlayerConnected -= PlayerConnected;
             }
-            if(Client)
+            if (Client)
             {
                 Save(Settings.Instance);                
                 if(clientActionRegistered)

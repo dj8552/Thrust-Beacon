@@ -27,6 +27,17 @@ namespace ThrustBeacon
     {
         private void LoadBlockConfigs()
         {
+            //Roll subtype IDs of all WC weapons into a hash set
+            List<VRage.Game.MyDefinitionId> tempWeaponDefs = new List<VRage.Game.MyDefinitionId>();
+            if (wcAPI != null)
+                wcAPI.GetAllCoreWeapons(tempWeaponDefs);
+            foreach (var def in tempWeaponDefs)
+            {
+                weaponSubtypeIDs.Add(def.SubtypeId);
+                MyLog.Default.WriteLineAndConsole(ModName + $"Registered {weaponSubtypeIDs.Count} weapon block types");
+            }
+
+
             var Filename = "BlockConfig.cfg";
             if (MyAPIGateway.Utilities.FileExistsInWorldStorage(Filename, typeof(BlockConfig)))
             {

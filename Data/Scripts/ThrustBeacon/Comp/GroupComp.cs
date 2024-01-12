@@ -100,7 +100,7 @@ namespace ThrustBeacon
                 groupSignalRange += gridComp.signalRange;
                 groupDetectionRange += gridComp.detectionRange;
             }
-            groupBroadcastDistSqr = groupBroadcastDist * groupBroadcastDist;
+            groupBroadcastDistSqr = (long)groupBroadcastDist * groupBroadcastDist;
             groupSphere = tempGroupSphere;
             groupLastUpdate = Session.Tick;
             groupSpecialsDirty = false; //Since they should be caight by CalcSignal
@@ -119,23 +119,23 @@ namespace ThrustBeacon
             groupFaction = faction == null? "": faction.Tag + ".";
 
             //Update size enum
-            if (groupBroadcastDist < 2500)//Idle
+            if (groupBroadcastDist < ss.Distance1)//Idle
             {
                 groupSizeEnum = 0;
             }
-            else if (groupBroadcastDist < 100000)//Small
+            else if (groupBroadcastDist < ss.Distance2)//Small
             {
                 groupSizeEnum = 1;
             }
-            else if (groupBroadcastDist < 200000)//Medium
+            else if (groupBroadcastDist < ss.Distance3)//Medium
             {
                 groupSizeEnum = 2;
             }
-            else if (groupBroadcastDist < 300000)//Large
+            else if (groupBroadcastDist < ss.Distance4)//Large
             {
                 groupSizeEnum = 3;
             }
-            else if (groupBroadcastDist < 400000)//Huge
+            else if (groupBroadcastDist < ss.Distance5)//Huge
             {
                 groupSizeEnum = 4;
             }

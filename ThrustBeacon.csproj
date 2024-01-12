@@ -162,14 +162,15 @@
     <Compile Include="Data\Scripts\ThrustBeacon\Comp\GroupComp.cs" />
     <Compile Include="Data\Scripts\ThrustBeacon\Comp\GridComp.cs" />
     <Compile Include="Data\Scripts\ThrustBeacon\Comp\SignalComp.cs" />
-    <Compile Include="Data\Scripts\ThrustBeacon\Session\ServerSettings.cs" />
-    <Compile Include="Data\Scripts\ThrustBeacon\Session\GridGroupLogic.cs">
+    <Compile Include="Data\Scripts\ThrustBeacon\Session\ClientDraw.cs" />
+    <Compile Include="Data\Scripts\ThrustBeacon\Configs\ServerSettings.cs" />
+    <Compile Include="Data\Scripts\ThrustBeacon\Session\SessionEvents.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Compile>
-    <Compile Include="Data\Scripts\ThrustBeacon\Session\Settings.cs" />
-    <Compile Include="Data\Scripts\ThrustBeacon\Session\Configs.cs" />
-    <Compile Include="Data\Scripts\ThrustBeacon\Session\Networking.cs" />
-    <Compile Include="Data\Scripts\ThrustBeacon\Session\PacketBase.cs" />
+    <Compile Include="Data\Scripts\ThrustBeacon\Configs\Settings.cs" />
+    <Compile Include="Data\Scripts\ThrustBeacon\Configs\Configs.cs" />
+    <Compile Include="Data\Scripts\ThrustBeacon\Networking\Networking.cs" />
+    <Compile Include="Data\Scripts\ThrustBeacon\Networking\PacketBase.cs" />
     <Compile Include="Data\Scripts\ThrustBeacon\Session\SessionFields.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Compile>
