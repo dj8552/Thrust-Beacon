@@ -1,5 +1,6 @@
 ﻿using Digi.Example_NetworkProtobuf;
 using Sandbox.ModAPI;
+using System.Collections.Generic;
 using VRage.Game.Components;
 using VRage.Game.ModAPI;
 using VRage.Utils;
@@ -9,18 +10,31 @@ namespace ThrustBeacon
 {
     public partial class Session : MySessionComponentBase
     {
+        private void RegisterWCDefs()
+        {
+            //Roll subtype IDs of all WC weapons into a hash set
+            List<VRage.Game.MyDefinitionId> tempWeaponDefs = new List<VRage.Game.MyDefinitionId>();
+            wcAPI.GetAllCoreWeapons(tempWeaponDefs);
+            foreach (var def in tempWeaponDefs)
+            {
+                weaponSubtypeIDs.Add(def.SubtypeId);
+            }
+            MyLog.Default.WriteLineAndConsole($"{ModName}Registered {weaponSubtypeIDs.Count} weapon block types");
+        }
+
+
         //Send newly connected clients server-specific data (label text)
         private void PlayerConnected(long playerId)
         {
-            MyLog.Default.WriteLineAndConsole($"{ModName}: Player connected " + playerId);
+            MyLog.Default.WriteLineAndConsole($"{ModName}Player connected " + playerId);
             var steamId = MyAPIGateway.Multiplayer.Players.TryGetSteamId(playerId);
             if (steamId != 0)
             {
                 Networking.SendToPlayer(new PacketSettings(messageList), steamId);
-                MyLog.Default.WriteLineAndConsole($"{ModName}: Sent settings to player " + steamId);
+                MyLog.Default.WriteLineAndConsole($"{ModName}Sent settings to player " + steamId);
             }
             else
-                MyLog.Default.WriteLineAndConsole($"{ModName}: Failed to find steam ID for playerId " + playerId);
+                MyLog.Default.WriteLineAndConsole($"{ModName}Failed to find steam ID for playerId " + playerId);
         }
 
         //Dump current signals when hopping out of a grid

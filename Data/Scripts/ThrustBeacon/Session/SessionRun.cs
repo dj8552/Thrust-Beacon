@@ -32,6 +32,10 @@ namespace ThrustBeacon
                 //Hook connection event to send label list
                 MyVisualScriptLogicProvider.PlayerConnected += PlayerConnected;
             }
+
+            //Init WC and register all defs on callback
+            wcAPI = new WcApi();
+            wcAPI.Load(RegisterWCDefs, true);
         }
         public override void LoadData()
         {
@@ -44,8 +48,6 @@ namespace ThrustBeacon
                 hudAPI = new HudAPIv2(InitMenu);
                 viewDist = Math.Min(Session.SessionSettings.SyncDistance, Session.SessionSettings.ViewDistance);
             }
-            wcAPI = new WcApi();
-            wcAPI.Load();
             if (Server)
             {
                 dsAPI = new ShieldApi();
