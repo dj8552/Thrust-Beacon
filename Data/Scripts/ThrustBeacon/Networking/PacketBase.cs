@@ -86,14 +86,18 @@ namespace Digi.Example_NetworkProtobuf
     {
         [ProtoMember(200)]
         public List<string> Labels;
+        [ProtoMember(201)]
+        public bool ClientBeacon;
         public PacketSettings() { } // Empty constructor required for deserialization
-        public PacketSettings(List<string> labels)
+        public PacketSettings(List<string> labels, bool clientBeacon)
         {
             Labels = labels;
+            ClientBeacon = clientBeacon;
         }
         public override bool Received()
         {
             Session.messageList = Labels;
+            Session.clientUpdateBeacon = ClientBeacon;
             MyLog.Default.WriteLineAndConsole($"{Session.ModName}: Received server label list");
             return false;
         }

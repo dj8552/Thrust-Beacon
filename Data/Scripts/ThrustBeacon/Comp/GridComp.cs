@@ -201,9 +201,11 @@ namespace ThrustBeacon
                 double rawWepHeat = 0.0d;
                 foreach(var wep in weaponList)
                 {
-                    rawWepHeat += Session.wcAPI.GetHeatLevel(wep);
+                    var wepHeat = Session.wcAPI.GetHeatLevel(wep);
+                    if (wepHeat == 0)
+                        continue;
+                    rawWepHeat += wepHeat / ss.DefaultWeaponHeatDivisor;
                 }
-                rawWepHeat /= ss.DefaultWeaponHeatDivisor;
                 broadcastDist += (int)rawWepHeat;
             }
 
@@ -241,6 +243,18 @@ namespace ThrustBeacon
             foreach (var thrust in thrustList)
                 if (thrust.Key.Enabled && !thrust.Key.MarkedForClose)
                     thrust.Key.Enabled = false;
+        }
+        internal void TogglePowerOn()
+        {
+            foreach (var power in powerList)
+                if (!power.Key.Enabled && !power.Key.MarkedForClose)
+                    power.Key.Enabled = true;
+        }
+        internal void ToggleThrustOn()
+        {
+            foreach (var thrust in thrustList)
+                if (!thrust.Key.Enabled && !thrust.Key.MarkedForClose)
+                    thrust.Key.Enabled = true;
         }
 
         internal void Clean()

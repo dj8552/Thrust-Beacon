@@ -2,6 +2,7 @@
 using Sandbox.ModAPI;
 using System.Collections.Generic;
 using VRage.Game.ModAPI;
+using VRage.Utils;
 using VRageMath;
 
 namespace ThrustBeacon
@@ -143,22 +144,35 @@ namespace ThrustBeacon
             {
                 groupSizeEnum = 5;
             }
-
+           
             //Shutdown condition checks
             if (ss.ShutdownPowerOverMaxSignal)
             {
-                if (groupBroadcastDist >= ss.MaxSignalforPowerShutdown)
+                if (groupBroadcastDist >= ss.MaxSignalforPowerShutdown && !Session.powershutdownList.Contains(this))
+                {
                     Session.powershutdownList.Add(this);
+                }
                 else if (groupBroadcastDist < ss.MaxSignalforPowerShutdown && Session.powershutdownList.Contains(this))
+                {
                     Session.powershutdownList.Remove(this);
+                    TogglePowerOn();
+                }
             }
             if (ss.ShutdownThrustersOverMaxSignal)
             {
-                if (groupBroadcastDist >= ss.MaxSignalforThrusterShutdown)
+                if (groupBroadcastDist >= ss.MaxSignalforThrusterShutdown && !Session.thrustshutdownList.Contains(this))
+                {
                     Session.thrustshutdownList.Add(this);
+                }
                 else if (groupBroadcastDist < ss.MaxSignalforThrusterShutdown && Session.thrustshutdownList.Contains(this))
+                {
                     Session.thrustshutdownList.Remove(this);
+                    ToggleThrustOn();
+                }
             }
+
+            if(Session.powershutdownList.Contains(this) || Session.thrustshutdownList.Contains(this))
+                groupSizeEnum = 6;
         }
 
         internal void TogglePower()
@@ -171,6 +185,17 @@ namespace ThrustBeacon
         {
             foreach (var gridComp in GridDict.Values)
                 gridComp.ToggleThrust();
+        }
+        internal void TogglePowerOn()
+        {
+            foreach (var gridComp in GridDict.Values)
+                gridComp.TogglePowerOn();
+        }
+
+        internal void ToggleThrustOn()
+        {
+            foreach (var gridComp in GridDict.Values)
+                gridComp.ToggleThrustOn();
         }
 
         internal void Clean()

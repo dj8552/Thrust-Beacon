@@ -214,6 +214,8 @@ namespace ThrustBeacon
                 Save(Settings.Instance);                
                 if(clientActionRegistered)
                     Session.Player.Controller.ControlledEntityChanged -= GridChange;
+                if (primaryBeacon != null)
+                    Beacon_OnClosing(primaryBeacon);
             }
             if (wcAPI != null)
                 wcAPI.Unload();

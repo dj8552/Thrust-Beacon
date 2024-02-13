@@ -2,6 +2,7 @@
 using DefenseShields;
 using Digi.Example_NetworkProtobuf;
 using Draygo.API;
+using Sandbox.ModAPI;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -49,6 +50,12 @@ namespace ThrustBeacon
         internal bool clientActionRegistered = false;
         Random rand = new Random();
         internal static string ModName = "[Thrust Beacon]"; //Since I may change the name, this is used in logging
+        internal string primaryBeaconLabel = "[PRI]";
+        internal IMyBeacon primaryBeacon;
+        internal int clientLastBeaconDist = 0;
+        internal int clientLastBeaconSizeEnum = 0;
+        internal static bool clientUpdateBeacon = false;
+
 
         private void Clean()
         {

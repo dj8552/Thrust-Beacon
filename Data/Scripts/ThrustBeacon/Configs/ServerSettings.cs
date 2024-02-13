@@ -29,6 +29,7 @@ namespace ThrustBeacon
             SendSignalDataToSuits = false, //If false, characters outside of grids will not get beacon updates
             IncludeShieldHPInSignal = true,
             DefaultShieldHPDivisor = 50,
+            UpdateBeaconOnControlledGrid = false
         };
         [ProtoMember(1)]
         public bool IncludePowerInSignal { get; set; }
@@ -84,6 +85,8 @@ namespace ThrustBeacon
         public string Label6 { get; set; } = "Massive Sig";
         [ProtoMember(27)]
         public string LabelShutdown { get; set; } = "OVERHEAT - SHUTDOWN";
+        [ProtoMember(28)]
+        public bool UpdateBeaconOnControlledGrid { get; set; } = false;
 
     }
     public partial class Session
@@ -122,7 +125,10 @@ namespace ThrustBeacon
         }
         public void SaveServer(ServerSettings settings)
         {
+            //SP writes to local variables, handled by packets w/ networking in MP
             messageList = new List<string>() {settings.Label1, settings.Label2, settings.Label3, settings.Label4, settings.Label5, settings.Label6, settings.LabelShutdown};
+            clientUpdateBeacon = settings.UpdateBeaconOnControlledGrid;
+
             var Filename = "ServerConfig.cfg";
             TextWriter writer;
             writer = MyAPIGateway.Utilities.WriteFileInWorldStorage(Filename, typeof(ServerSettings));

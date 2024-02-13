@@ -30,9 +30,26 @@ namespace ThrustBeacon
                     if (contact.entityID == playerEnt)
                     {
                         var dispRange = contact.range > 1000 ? (contact.range / 1000f).ToString("0.#") + " km" : contact.range + " m";
-                        var info = new StringBuilder("Broadcast Dist: " + dispRange + "\n" + "Size: " + messageList[contact.sizeEnum]);
+                        var warnColor = "";
+                        if(contact.sizeEnum == 6 && (Tick + 15) % 60 <= 20)
+                            warnColor = "<color=255, 0, 0>";
+                                
+                        
+
+
+
+                        //var warnColor = contact.sizeEnum == 6 ? "<color=255, 0, 0>" : contact.sizeEnum == 5 ? "<color=255, 255, 0>" : "";
+                        var info = new StringBuilder($"Broadcast Dist: " + dispRange + "\n" + "Size: " + warnColor + messageList[contact.sizeEnum]);
                         var Label = new HudAPIv2.HUDMessage(info, s.signalDrawCoords, null, 2, s.textSizeOwn, true, true);
                         Label.Visible = true;
+
+                        if(clientUpdateBeacon && Tick % 29 == 0 && primaryBeacon != null)
+                        {
+                            primaryBeacon.Radius = contact.range;
+                            primaryBeacon.HudText = messageList[contact.sizeEnum];
+                            clientLastBeaconDist = contact.range;
+                            clientLastBeaconSizeEnum = contact.sizeEnum;
+                        }
                     }
                     //Other grid signals received from server
                     else

@@ -1,8 +1,13 @@
 ﻿using Digi.Example_NetworkProtobuf;
+using Sandbox.Game.Entities;
+using Sandbox.Game.Entities.Cube;
 using Sandbox.ModAPI;
+using System;
 using System.Collections.Generic;
+using VRage.Game;
 using VRage.Game.Components;
 using VRage.Game.ModAPI;
+using VRage.ModAPI;
 using VRage.Utils;
 
 
@@ -30,7 +35,7 @@ namespace ThrustBeacon
             var steamId = MyAPIGateway.Multiplayer.Players.TryGetSteamId(playerId);
             if (steamId != 0)
             {
-                Networking.SendToPlayer(new PacketSettings(messageList), steamId);
+                Networking.SendToPlayer(new PacketSettings(messageList, ServerSettings.Instance.UpdateBeaconOnControlledGrid), steamId);
                 MyLog.Default.WriteLineAndConsole($"{ModName}Sent settings to player " + steamId);
             }
             else
@@ -43,7 +48,97 @@ namespace ThrustBeacon
             if (newEnt is IMyCharacter)
             {
                 SignalList.Clear();
+                
+                //Clear out old primary
+                if(primaryBeacon != null)
+                {
+                    primaryBeacon.HudText = "";
+                    primaryBeacon.Radius = 0;
+                    Beacon_OnClosing(primaryBeacon);
+                }
             }
+            else if (newEnt is IMyCubeBlock && clientUpdateBeacon && !newEnt.Entity.MarkedForClose)
+            {
+                try
+                {
+                    var block = newEnt as IMyCubeBlock;
+                    var entGrid = (MyCubeGrid)block.CubeGrid;
+                    var group = entGrid.GetGridGroup(GridLinkTypeEnum.Mechanical);
+                    var groupGridList = new List<IMyCubeGrid>();
+                    group.GetGrids(groupGridList);
+                    IMyBeacon lastBeacon = null;
+
+                    foreach (var igrid in groupGridList)
+                    {                       
+                        var grid = (MyCubeGrid)igrid;
+                        foreach (var fat in grid.GetFatBlocks())
+                        {
+                            if (!(fat is IMyBeacon))
+                                continue;
+                            var beacon = fat as IMyBeacon;
+                            //There's already something tagged as primary
+                            if (beacon.CustomName.Contains(primaryBeaconLabel))
+                            {
+                                if (primaryBeacon == null)
+                                {
+                                    primaryBeacon = beacon;
+                                }
+                                else //Multiple beacons marked as primary- clear out old (if player manually added [pri] tag or grid merge
+                                {
+                                    beacon.CustomName = beacon.CustomName.Replace(primaryBeaconLabel, string.Empty);
+                                    beacon.HudText = "";
+                                    beacon.Radius = 0;
+                                }
+                            }
+                            lastBeacon = beacon;
+                        }
+                    }
+
+                    //Update name, register actions, etc
+                    if (primaryBeacon == null && lastBeacon != null)
+                        primaryBeacon = lastBeacon;
+                    if (primaryBeacon == null)
+                        return;
+                    if (!primaryBeacon.Enabled)
+                        primaryBeacon.Enabled = true;
+                    primaryBeacon.PropertiesChanged += Beacon_PropertiesChanged;
+                    primaryBeacon.EnabledChanged += Beacon_EnabledChanged;
+                    primaryBeacon.OnClosing += Beacon_OnClosing;
+                    if (!primaryBeacon.CustomName.Contains(primaryBeaconLabel))
+                        primaryBeacon.CustomName += primaryBeaconLabel;
+                }
+                catch (Exception e)
+                {
+                    MyLog.Default.WriteLineAndConsole($"{ModName} Error in selection of primary beacon {e.InnerException}");
+                }
+            }
+        }
+
+        private void Beacon_OnClosing(IMyEntity ent)
+        {
+            //Deregister actions for the primary beacon
+            var beacon = ent as IMyBeacon;
+            beacon.EnabledChanged -= Beacon_EnabledChanged;
+            beacon.PropertiesChanged -= Beacon_PropertiesChanged;
+            beacon.OnClosing -= Beacon_OnClosing;
+            primaryBeacon = null;
+        }
+        private void Beacon_PropertiesChanged(IMyTerminalBlock block)
+        {
+            //Primary beacon anti-tamper
+            var beacon = block as IMyBeacon;
+            if (beacon.HudText != messageList[clientLastBeaconSizeEnum] || Math.Abs(beacon.Radius - clientLastBeaconDist) > 0.0001)
+            {
+                beacon.Radius = clientLastBeaconDist;
+                beacon.HudText = messageList[clientLastBeaconSizeEnum];
+            }
+        }
+        private void Beacon_EnabledChanged(IMyTerminalBlock block)
+        {
+            //Primary beacon anti-tamper
+            var beacon = block as IMyBeacon;
+            if (!beacon.Enabled)
+                beacon.Enabled = true;
         }
         private void GridGroupsOnOnGridGroupCreated(IMyGridGroupData group)
         {
