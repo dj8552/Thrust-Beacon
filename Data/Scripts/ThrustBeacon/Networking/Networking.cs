@@ -43,5 +43,15 @@ namespace Digi.Example_NetworkProtobuf
             var bytes = MyAPIGateway.Utilities.SerializeToBinary(packet);
             MyAPIGateway.Multiplayer.SendMessageTo(ChannelId, bytes, steamId);
         }
+        public void SendToServer(PacketBase packet)
+        {
+            if (MyAPIGateway.Multiplayer.IsServer)
+            {
+                packet.Received();
+                return;
+            }
+            var bytes = MyAPIGateway.Utilities.SerializeToBinary(packet);
+            MyAPIGateway.Multiplayer.SendMessageToServer(ChannelId, bytes);
+        }
     }
 }

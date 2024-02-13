@@ -3,6 +3,7 @@ using Sandbox.ModAPI;
 using System.Collections.Generic;
 using VRage.Game.Entity;
 using VRage.Game.ModAPI;
+using VRage.Utils;
 
 namespace ThrustBeacon
 {
@@ -24,6 +25,8 @@ namespace ThrustBeacon
         internal float detectionRange = 0f;
         internal bool specialsDirty = false;
         internal int funcCount = 0;
+        internal bool gridLogging = false;
+        internal string gridLog = "";
         
         internal void Init(MyCubeGrid grid, IMyGridGroupData myGroup)
         {
@@ -168,6 +171,7 @@ namespace ThrustBeacon
                 RecalcSpecials();
 
             //Thrust
+            int finalThrust = 0;
             if (ss.IncludeThrustInSignal && !Grid.IsStatic)
             {
                 double rawThrustOutput = 0.0d;
@@ -178,24 +182,26 @@ namespace ThrustBeacon
                         continue;
                     rawThrustOutput += thrustOutput / thrust.Value;
                 }
-                broadcastDist += (int)rawThrustOutput;
+                finalThrust += (int)rawThrustOutput;
             }
 
             //Power
+            int finalPower = 0;
             if (ss.IncludePowerInSignal)
             {
                 double rawPowerOutput = 0.0d;
                 foreach (var power in powerList)
                 {
-                    var powerOutput = power.Key.CurrentOutput; //in MW
+                    var powerOutput = power.Key.CurrentOutput * 1000000; //convert MW to W
                     if (powerOutput == 0)
                         continue;
                     rawPowerOutput += powerOutput / power.Value;
                 }
-                broadcastDist += (int)rawPowerOutput;
+                finalPower += (int)rawPowerOutput;
             }
 
             //WeaponHeat
+            int finalWeaponHeat = 0;
             if (ss.IncludeWeaponHeatInSignal && Session.wcAPI.IsReady)
             {
                 double rawWepHeat = 0.0d;
@@ -206,16 +212,21 @@ namespace ThrustBeacon
                         continue;
                     rawWepHeat += wepHeat / ss.DefaultWeaponHeatDivisor;
                 }
-                broadcastDist += (int)rawWepHeat;
+                finalWeaponHeat += (int)rawWepHeat;
             }
 
             //Defense Shields
+            int finalShield = 0;
             if (ss.IncludeShieldHPInSignal && Session.dsAPI.IsReady && Session.dsAPI.GridHasShield(Grid))
             {
-                broadcastDist += (int)(Session.dsAPI.GetShieldInfo(Grid).Item3 * 100 / ss.DefaultShieldHPDivisor);
+                finalShield += (int)(Session.dsAPI.GetShieldInfo(Grid).Item3 * 100 / ss.DefaultShieldHPDivisor);
                 //Item 3 is charge, mult by 100 for HP
                 //Item 6 is heat, 0-100 in increments of 10
             }
+
+            //Final tally
+            broadcastDist = finalPower + finalShield + finalThrust + finalWeaponHeat;
+
 
             //Cooldown
             if (broadcastDistOld > broadcastDist || Grid.IsStatic)
@@ -230,6 +241,27 @@ namespace ThrustBeacon
 
             //SignalRange increase from specials
             broadcastDist += (int)signalRange;
+
+            //Logging rollup
+            if (gridLogging)
+            {
+                gridLog = "";
+                if (broadcastDist > 1)
+                    gridLog += $"{Grid.DisplayName} total output: {broadcastDist}m";
+                if (finalThrust > 0)
+                    gridLog += $"\n    Thrust: {finalThrust}m";
+                if (finalPower > 0)
+                    gridLog += $"\n    Power: {finalPower}m";
+                if (finalWeaponHeat > 0)
+                    gridLog += $"\n    Weapon Heat: {finalWeaponHeat}m";
+                if (finalShield > 0)
+                    gridLog += $"\n    Shields: {finalShield}m";
+                if (signalRange != 0)
+                    gridLog += $"\n    Signal Range Mod: {signalRange}m";
+                if (detectionRange != 0)
+                    gridLog += $"\n    Detection Range Mod: {detectionRange}m";
+                gridLogging = false;
+            }
         }
 
         internal void TogglePower()

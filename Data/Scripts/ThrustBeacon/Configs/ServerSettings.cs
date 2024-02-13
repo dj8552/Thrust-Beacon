@@ -15,7 +15,7 @@ namespace ThrustBeacon
         public static readonly ServerSettings Default = new ServerSettings()
         {
             IncludePowerInSignal = true,
-            DefaultPowerDivisor = 600, //Default power divisor if no other value is specified
+            DefaultPowerDivisor = 120000, //Default power divisor if no other value is specified.  Yields 2.5km of signal per LG large reactor
             IncludeThrustInSignal = true,
             DefaultThrustDivisor = 600, //Default thrust divisor if no other value is specified
             LargeGridCooldownRate = 0.95f, //Previous signal is multiplied by this per 59 tick cycle (unless freshly calc'd value is > than old value)
@@ -32,35 +32,35 @@ namespace ThrustBeacon
             UpdateBeaconOnControlledGrid = false
         };
         [ProtoMember(1)]
-        public bool IncludePowerInSignal { get; set; }
+        public bool IncludePowerInSignal { get; set; } = true;
         [ProtoMember(2)]
-        public int DefaultPowerDivisor { get; set; }
+        public int DefaultPowerDivisor { get; set; } = 120000;
         [ProtoMember(3)]
-        public bool IncludeThrustInSignal { get; set; }
+        public bool IncludeThrustInSignal { get; set; } = true;
         [ProtoMember(4)]
-        public int DefaultThrustDivisor { get; set; }
+        public int DefaultThrustDivisor { get; set; } = 600;
         [ProtoMember(5)]
-        public float LargeGridCooldownRate { get; set; }
+        public float LargeGridCooldownRate { get; set; } = 0.95f;
         [ProtoMember(6)]
-        public float SmallGridCooldownRate { get; set; }
+        public float SmallGridCooldownRate { get; set; } = 0.85f;
         [ProtoMember(7)]
-        public bool ShutdownPowerOverMaxSignal { get; set; }
+        public bool ShutdownPowerOverMaxSignal { get; set; } = true;
         [ProtoMember(8)]
-        public double MaxSignalforPowerShutdown { get; set; }
+        public double MaxSignalforPowerShutdown { get; set; } = 500000;
         [ProtoMember(9)]
-        public bool ShutdownThrustersOverMaxSignal { get; set; }
+        public bool ShutdownThrustersOverMaxSignal { get; set; } = true;
         [ProtoMember(10)]
-        public double MaxSignalforThrusterShutdown { get; set; }
+        public double MaxSignalforThrusterShutdown { get; set; } = 500000;
         [ProtoMember(11)]
-        public bool IncludeWeaponHeatInSignal { get; set; }
+        public bool IncludeWeaponHeatInSignal { get; set; } = true;
         [ProtoMember(12)]
-        public double DefaultWeaponHeatDivisor { get; set; }
+        public double DefaultWeaponHeatDivisor { get; set; } = 1;
         [ProtoMember(13)]
-        public bool SendSignalDataToSuits { get; set; }
+        public bool SendSignalDataToSuits { get; set; } = false;
         [ProtoMember(14)]
-        public bool IncludeShieldHPInSignal { get; set; }
+        public bool IncludeShieldHPInSignal { get; set; } = true;
         [ProtoMember(15)]
-        public int DefaultShieldHPDivisor { get; set; }
+        public int DefaultShieldHPDivisor { get; set; } = 50;
         [ProtoMember(16)]
         public int Distance1 { get; set; } = 2500;
         [ProtoMember(17)]
@@ -128,6 +128,9 @@ namespace ThrustBeacon
             //SP writes to local variables, handled by packets w/ networking in MP
             messageList = new List<string>() {settings.Label1, settings.Label2, settings.Label3, settings.Label4, settings.Label5, settings.Label6, settings.LabelShutdown};
             clientUpdateBeacon = settings.UpdateBeaconOnControlledGrid;
+
+            //Temp to not bork Paradiso
+            ServerSettings.Instance.DefaultPowerDivisor = 120000;
 
             var Filename = "ServerConfig.cfg";
             TextWriter writer;

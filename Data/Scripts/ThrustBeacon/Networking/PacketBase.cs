@@ -11,6 +11,8 @@ namespace Digi.Example_NetworkProtobuf
 {
     [ProtoInclude(1000, typeof(PacketSettings))]
     [ProtoInclude(2000, typeof(PacketSignals))]
+    [ProtoInclude(3000, typeof(PacketStatsRequest))]
+    [ProtoInclude(4000, typeof(PacketStatsSend))]
     [ProtoContract]
     public abstract class PacketBase
     {
@@ -99,6 +101,61 @@ namespace Digi.Example_NetworkProtobuf
             Session.messageList = Labels;
             Session.clientUpdateBeacon = ClientBeacon;
             MyLog.Default.WriteLineAndConsole($"{Session.ModName}: Received server label list");
+            return false;
+        }
+    }
+
+    [ProtoContract]
+    public partial class PacketStatsRequest : PacketBase
+    {
+        [ProtoMember(300)]
+        public ulong PlayerID;
+        [ProtoMember(301)]
+        public long EntityID;
+        public PacketStatsRequest() { } // Empty constructor required for deserialization
+        public PacketStatsRequest(ulong playerID, long entityID)
+        {
+            PlayerID = playerID;
+            EntityID = entityID;
+        }
+        public override bool Received()
+        {
+            MyLog.Default.WriteLineAndConsole($"{Session.ModName}: Server received logging request");
+            GroupComp logGroupComp = null;
+            foreach(var group in Session.GroupDict)
+            {
+                foreach(var grid in group.Value.GridDict)
+                {
+                    if (grid.Key.EntityId == EntityID)
+                    {
+                        group.Value.groupLogging = true;
+                        group.Value.groupLogRequestor = PlayerID;
+                        logGroupComp = group.Value;
+                        break;
+                    }
+                }
+            }
+
+            if(logGroupComp == null)
+                MyLog.Default.WriteLineAndConsole($"{Session.ModName}: Server could not match grid entity ID");
+            return false;
+        }
+    }
+    [ProtoContract]
+    public partial class PacketStatsSend : PacketBase
+    {
+        [ProtoMember(400)]
+        public string Log;
+
+        public PacketStatsSend() { } // Empty constructor required for deserialization
+        public PacketStatsSend(string log)
+        {
+            Log = log;
+        }
+        public override bool Received()
+        {
+            MyAPIGateway.Utilities.ShowMissionScreen("Signal Report", "", "", Log, null, "Close");
+            MyLog.Default.WriteLineAndConsole($"{Session.ModName}: Received log from server");
             return false;
         }
     }

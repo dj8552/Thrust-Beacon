@@ -31,14 +31,8 @@ namespace ThrustBeacon
                     {
                         var dispRange = contact.range > 1000 ? (contact.range / 1000f).ToString("0.#") + " km" : contact.range + " m";
                         var warnColor = "";
-                        if(contact.sizeEnum == 6 && (Tick + 15) % 60 <= 20)
+                        if (contact.sizeEnum == 6 && (Tick + 15) % 60 <= 20)
                             warnColor = "<color=255, 0, 0>";
-                                
-                        
-
-
-
-                        //var warnColor = contact.sizeEnum == 6 ? "<color=255, 0, 0>" : contact.sizeEnum == 5 ? "<color=255, 255, 0>" : "";
                         var info = new StringBuilder($"Broadcast Dist: " + dispRange + "\n" + "Size: " + warnColor + messageList[contact.sizeEnum]);
                         var Label = new HudAPIv2.HUDMessage(info, s.signalDrawCoords, null, 2, s.textSizeOwn, true, true);
                         Label.Visible = true;

@@ -1,4 +1,5 @@
-﻿using Sandbox.Game.Entities;
+﻿using Digi.Example_NetworkProtobuf;
+using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
 using System.Collections.Generic;
 using VRage.Game.ModAPI;
@@ -22,6 +23,9 @@ namespace ThrustBeacon
         internal byte groupSizeEnum;
         internal string groupFaction = "";
         internal long groupFactionID = 0;
+        internal bool groupLogging = false;
+        internal string groupLog = "";
+        internal ulong groupLogRequestor = 0;
 
         internal void InitGrids()
         {
@@ -87,6 +91,8 @@ namespace ThrustBeacon
             var tempGroupSphere = new BoundingSphereD(Vector3D.Zero, double.MinValue);
             foreach(var gridComp in GridDict.Values)
             {
+                if (groupLogging)
+                    gridComp.gridLogging = true;
                 gridComp.CalcSignal();
                 //Recalc group sphere
                 tempGroupSphere.Include(gridComp.Grid.PositionComp.WorldVolume);
@@ -100,6 +106,12 @@ namespace ThrustBeacon
                 groupBroadcastDist += gridComp.broadcastDist;
                 groupSignalRange += gridComp.signalRange;
                 groupDetectionRange += gridComp.detectionRange;
+
+                if (groupLogging && gridComp.gridLog.Length > 0)
+                {
+                    groupLog += gridComp.gridLog + "\n \n";
+                    gridComp.gridLog = "";
+                }
             }
             groupBroadcastDistSqr = (long)groupBroadcastDist * groupBroadcastDist;
             groupSphere = tempGroupSphere;
@@ -173,6 +185,13 @@ namespace ThrustBeacon
 
             if(Session.powershutdownList.Contains(this) || Session.thrustshutdownList.Contains(this))
                 groupSizeEnum = 6;
+
+            if (groupLogging)
+            {
+                groupLogging = false;
+                Session.ReadyLogs.Add($"Group total broadcast: {groupBroadcastDist}m  {Session.messageList[groupSizeEnum]}\n \n" + groupLog, groupLogRequestor);
+                groupLog = "";
+            }
         }
 
         internal void TogglePower()

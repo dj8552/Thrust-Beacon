@@ -27,7 +27,6 @@ namespace ThrustBeacon
             MyLog.Default.WriteLineAndConsole($"{ModName}Registered {weaponSubtypeIDs.Count} weapon block types");
         }
 
-
         //Send newly connected clients server-specific data (label text)
         private void PlayerConnected(long playerId)
         {
@@ -109,7 +108,7 @@ namespace ThrustBeacon
                 }
                 catch (Exception e)
                 {
-                    MyLog.Default.WriteLineAndConsole($"{ModName} Error in selection of primary beacon {e.InnerException}");
+                    MyLog.Default.WriteLineAndConsole($"{ModName} Error in selection of primary beacon - replication not ready {e.InnerException}");
                 }
             }
         }
@@ -165,5 +164,32 @@ namespace ThrustBeacon
                 GroupDict.Remove(group);
             }
         }
+
+        private void OnMessageEnteredSender(ulong sender, string messageText, ref bool sendToOthers)
+        {
+            messageText.ToLower();
+
+            if(messageText == "/beacon stats")
+            {
+                sendToOthers = false;
+                if (lastLogRequestTick + 300 < Tick)
+                {
+                    var controlledEnt = Session.Player?.Controller?.ControlledEntity;
+                    var controlledBlock = controlledEnt as IMyCubeBlock;
+                    if (controlledBlock == null)
+                    {
+                        MyAPIGateway.Utilities.ShowNotification("Must be seated in a grid for signal stats");
+                        return;
+                    }
+                    lastLogRequestTick = Tick;
+                    Networking.SendToServer(new PacketStatsRequest(Session.Player.SteamUserId, controlledBlock.CubeGrid.EntityId));
+                }
+                else
+                    MyAPIGateway.Utilities.ShowNotification("Please wait at least 5 seconds between log requests");
+
+            }
+            return;
+        }
+
     }
 }

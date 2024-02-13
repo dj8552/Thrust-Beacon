@@ -32,6 +32,10 @@ namespace ThrustBeacon
                 //Hook connection event to send label list
                 MyVisualScriptLogicProvider.PlayerConnected += PlayerConnected;
             }
+            if(Client)
+            {
+                MyAPIGateway.Utilities.MessageEnteredSender += OnMessageEnteredSender;
+            }
 
             //Init WC and register all defs on callback
             wcAPI = new WcApi();
@@ -106,6 +110,16 @@ namespace ThrustBeacon
                     //Using 236 in the rand to give an approx 1 in 4 chance of an early update, but no faster than every 15 ticks
                     if (Tick - group.groupLastUpdate - 15 > rand.Next(236) || group.groupSpecialsDirty || Tick - group.groupLastUpdate > 59)
                         MyAPIGateway.Parallel.StartBackground(group.UpdateGroup);
+                }
+
+                //Send requested logs
+                if (ReadyLogs.Count > 0)
+                {
+                    foreach (var readyLog in ReadyLogs)
+                    {
+                        Networking.SendToPlayer(new PacketStatsSend(readyLog.Key), readyLog.Value);
+                    }
+                    ReadyLogs.Clear();
                 }
 
                 //Update players if the last 2 digits of their identity ID = tick % 100 to spread out network updates.  If 100 ticks is too long, div by 2
@@ -216,6 +230,7 @@ namespace ThrustBeacon
                     Session.Player.Controller.ControlledEntityChanged -= GridChange;
                 if (primaryBeacon != null)
                     Beacon_OnClosing(primaryBeacon);
+                MyAPIGateway.Utilities.MessageEnteredSender -= OnMessageEnteredSender;
             }
             if (wcAPI != null)
                 wcAPI.Unload();
