@@ -231,7 +231,7 @@ namespace ThrustBeacon
 
 
             //Cooldown
-            if (broadcastDistOld > broadcastDist || Grid.IsStatic)
+            if (broadcastDistOld > broadcastDist)// || Grid.IsStatic)
             {
                 //Reworked cooldown to normalize to a per second value, since recalcs are on a variable schedule
                 var partialCoolDown = (broadcastDistOld - broadcastDistOld * coolDownRate) * ((float)(Session.Tick - Session.GroupDict[group].groupLastUpdate) / 59);
@@ -249,19 +249,21 @@ namespace ThrustBeacon
             {
                 gridLog = "";
                 if (broadcastDist > 1)
+                {
                     gridLog += $"{Grid.DisplayName} total output: {broadcastDist}m";
-                if (finalThrust > 0)
-                    gridLog += $"\n    Thrust: {finalThrust}m";
-                if (finalPower > 0)
-                    gridLog += $"\n    Power: {finalPower}m";
-                if (finalWeaponHeat > 0)
-                    gridLog += $"\n    Weapon Heat: {finalWeaponHeat}m";
-                if (finalShield > 0)
-                    gridLog += $"\n    Shields: {finalShield}m";
-                if (signalRange != 0)
-                    gridLog += $"\n    Signal Range Mod: {signalRange}m";
-                if (detectionRange != 0)
-                    gridLog += $"\n    Detection Range Mod: {detectionRange}m";
+                    if (finalThrust > 0)
+                        gridLog += $"\n    Thrust: {finalThrust}m";
+                    if (finalPower > 0)
+                        gridLog += $"\n    Power: {finalPower}m";
+                    if (finalWeaponHeat > 0)
+                        gridLog += $"\n    Weapon Heat: {finalWeaponHeat}m";
+                    if (finalShield > 0)
+                        gridLog += $"\n    Shields: {finalShield}m";
+                    if (signalRange != 0)
+                        gridLog += $"\n    Signal Range Mod: {signalRange}m";
+                    if (detectionRange != 0)
+                        gridLog += $"\n    Detection Range Mod: {detectionRange}m";
+                }
                 gridLogging = false;
             }
         }

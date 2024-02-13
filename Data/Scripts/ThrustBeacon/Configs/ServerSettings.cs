@@ -128,10 +128,6 @@ namespace ThrustBeacon
             //SP writes to local variables, handled by packets w/ networking in MP
             messageList = new List<string>() {settings.Label1, settings.Label2, settings.Label3, settings.Label4, settings.Label5, settings.Label6, settings.LabelShutdown};
             clientUpdateBeacon = settings.UpdateBeaconOnControlledGrid;
-
-            //Temp to not bork Paradiso - REMOVE AFTER 2/14
-            ServerSettings.Instance.DefaultPowerDivisor = 120000;
-
             var Filename = "ServerConfig.cfg";
             TextWriter writer;
             writer = MyAPIGateway.Utilities.WriteFileInWorldStorage(Filename, typeof(ServerSettings));

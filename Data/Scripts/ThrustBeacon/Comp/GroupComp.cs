@@ -81,7 +81,6 @@ namespace ThrustBeacon
         internal void UpdateGroup()
         {
             var ss = ServerSettings.Instance;
-
             groupSignalRange = 0;
             groupDetectionRange = 0;
             groupBroadcastDist = 0;
