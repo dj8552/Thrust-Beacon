@@ -10,6 +10,9 @@ using VRageMath;
 using VRage.Game.ModAPI;
 using DefenseShields;
 using Sandbox.Game;
+using Sandbox.Game.Entities;
+using VRage.Game.Entity;
+using VRage;
 
 namespace ThrustBeacon
 {
@@ -168,7 +171,7 @@ namespace ThrustBeacon
                             signalData.position = (Vector3I)gridPos;
                             signalData.range = playerGrid ? group.groupBroadcastDist : (int)Math.Sqrt(distToTargSqr);
                             signalData.faction = group.groupFaction;
-                            signalData.entityID = playerGrid ? controlledGrid.EntityId : group.GetHashCode();
+                            signalData.entityID = playerGrid ? controlledGrid.EntityId : group.GridDict.FirstPair().Key.EntityId;
                             signalData.sizeEnum = group.groupSizeEnum;
                             if (!playerGrid && playerFaction != null)
                             {
@@ -206,6 +209,25 @@ namespace ThrustBeacon
                     groupComp.ToggleThrust();
             }
 
+            //Clientside list processing to deconflict items shown by WC Radar
+            if (Client && Settings.Instance.hideWC && Tick % 119 == 0)
+            {
+                var threatList = new List<MyTuple<MyEntity, float>>();
+                var obsList = new List<MyEntity>();
+                entityIDList.Clear();
+                var controlledEnt = MyAPIGateway.Session?.Player?.Controller?.ControlledEntity?.Entity?.Parent;
+                if (controlledEnt != null && controlledEnt is MyCubeGrid)
+                {
+                    //Scrape WC Data to one list of entities
+                    var myEnt = (MyEntity)controlledEnt;
+                    wcAPI.GetSortedThreats(myEnt, threatList);
+                    foreach (var item in threatList)
+                        entityIDList.Add(item.Item1.EntityId);
+                    wcAPI.GetObstructions(myEnt, obsList);
+                    foreach (var item in obsList)
+                        entityIDList.Add(item.EntityId);
+                }
+            }
         }
 
         protected override void UnloadData()

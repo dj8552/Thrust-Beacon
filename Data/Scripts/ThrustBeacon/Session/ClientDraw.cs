@@ -26,6 +26,12 @@ namespace ThrustBeacon
                 {
                     var contact = signal.Value.Item1;
 
+                    //WC Deconflict
+                    if(s.hideWC && entityIDList.Contains(contact.entityID))
+                    {
+                        continue;
+                    }
+
                     //Signal for own occupied grid
                     if (contact.entityID == playerEnt)
                     {

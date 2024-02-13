@@ -36,7 +36,7 @@ namespace ThrustBeacon
                 var gridComp = new GridComp();
                 gridComp.Init((MyCubeGrid)startGrid, iMyGroup);
                 GridDict.Add(startGrid, gridComp);
-            }
+            }            
         }
 
         internal void OnGridAdded(IMyGridGroupData AddedTo, IMyCubeGrid grid, IMyGridGroupData RemovedFrom)
