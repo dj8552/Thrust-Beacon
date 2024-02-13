@@ -219,7 +219,9 @@ namespace ThrustBeacon
             int finalShield = 0;
             if (ss.IncludeShieldHPInSignal && Session.dsAPI.IsReady && Session.dsAPI.GridHasShield(Grid))
             {
-                finalShield += (int)(Session.dsAPI.GetShieldInfo(Grid).Item3 * 100 / ss.DefaultShieldHPDivisor);
+                var shieldBlock = Session.dsAPI.GetShieldBlock(Grid);
+                if(shieldBlock != null && shieldBlock.CubeGrid == Grid)
+                    finalShield += (int)(Session.dsAPI.GetShieldInfo(Grid).Item3 * 100 / ss.DefaultShieldHPDivisor);
                 //Item 3 is charge, mult by 100 for HP
                 //Item 6 is heat, 0-100 in increments of 10
             }
