@@ -28,14 +28,13 @@ namespace ThrustBeacon
 
                     //WC Deconflict
                     if(s.hideWC && entityIDList.Contains(contact.entityID))
-                    {
                         continue;
-                    }
 
                     //Signal for own occupied grid
                     if (contact.entityID == playerEnt || contact.relation == 4)
                     {
                         var dispRange = contact.range > 1000 ? (contact.range / 1000f).ToString("0.#") + " km" : contact.range + " m";
+                        //Coloration and flashing for warning
                         var warnColor = "";
                         if (contact.sizeEnum == 6 && (Tick + 15) % 60 <= 20)
                             warnColor = "<color=255, 0, 0>";
@@ -45,6 +44,7 @@ namespace ThrustBeacon
                         var Label = new HudAPIv2.HUDMessage(info, s.signalDrawCoords, null, 2, s.textSizeOwn, true, true);
                         Label.Visible = true;
 
+                        //Optional beacon updates
                         if(clientUpdateBeacon && Tick % 29 == 0 && primaryBeacon != null)
                         {
                             primaryBeacon.Radius = contact.range;
@@ -63,9 +63,10 @@ namespace ThrustBeacon
                                 SignalList.Remove(signal.Key);
                             continue;
                         }
-                        float distance = Vector3.Distance(contact.position, camPos);
+                        float distance = Vector3.Distance(contact.position, camPos); //TODO Explore using contact.range
                         if (distance < s.hideDistance) continue;
 
+                        //Color and fade over time effect
                         var baseColor = contact.relation == 1 ? s.enemyColor : contact.relation == 3 ? s.friendColor : s.neutralColor;
                         var adjColor = baseColor;
                         if (fadeTimeTicks > 0)
