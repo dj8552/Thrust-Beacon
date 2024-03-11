@@ -174,11 +174,10 @@ namespace ThrustBeacon
                             signalData.faction = group.groupFaction;
                             signalData.entityID = playerGrid ? controlledGrid.EntityId : group.GridDict.FirstPair().Key.EntityId;
                             signalData.sizeEnum = group.groupSizeEnum;
-                            if (!playerGrid && playerFaction != null)
-                            {
-                                var relation = MyAPIGateway.Session.Factions.GetRelationBetweenFactions(playerFaction.FactionId, group.groupFactionID);
-                                signalData.relation = (byte)relation;
-                            }
+                            if (playerGrid)
+                                signalData.relation = 4;
+                            else if (!playerGrid && playerFaction != null)
+                                signalData.relation = (byte)MyAPIGateway.Session.Factions.GetRelationBetweenFactions(playerFaction.FactionId, group.groupFactionID);
                             else
                                 signalData.relation = 1;
                             validSignalList.Add(signalData);

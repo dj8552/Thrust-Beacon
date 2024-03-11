@@ -33,7 +33,7 @@ namespace ThrustBeacon
                     }
 
                     //Signal for own occupied grid
-                    if (contact.entityID == playerEnt)
+                    if (contact.entityID == playerEnt || contact.relation == 4)
                     {
                         var dispRange = contact.range > 1000 ? (contact.range / 1000f).ToString("0.#") + " km" : contact.range + " m";
                         var warnColor = "";
