@@ -38,7 +38,6 @@ namespace ThrustBeacon
             if(Client)
             {
                 MyAPIGateway.Utilities.MessageEnteredSender += OnMessageEnteredSender;
-                MyAPIGateway.Multiplayer.RegisterSecureMessageHandler(SeamlessClientNetId, SeamlessMessageHandler);
             }
 
             //Init WC and register all defs on callback

@@ -54,7 +54,6 @@ namespace ThrustBeacon
         internal static bool logging = true;
         internal static List<long> entityIDList = new List<long>();
         internal int lastLogRequestTick = 0;
-        public static ushort SeamlessClientNetId = 2936;
 
         //Sever specific
         internal static readonly List<MyStringHash> weaponSubtypeIDs = new List<MyStringHash>();
