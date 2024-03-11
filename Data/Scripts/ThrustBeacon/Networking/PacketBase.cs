@@ -68,6 +68,7 @@ namespace Digi.Example_NetworkProtobuf
             Session.messageList = Labels;
             Session.clientUpdateBeacon = ClientBeacon;
             MyLog.Default.WriteLineAndConsole($"{Session.ModName}: Received server label list");
+            Session.clientActionRegistered = false;
             return false;
         }
     }

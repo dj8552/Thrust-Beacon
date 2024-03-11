@@ -164,7 +164,21 @@ namespace ThrustBeacon
                 GroupDict.Remove(group);
             }
         }
+        private void SeamlessMessageHandler(ushort packetID, byte[] data, ulong sender, bool fromServer)
+        {
+            if (!fromServer || sender == 0)
+                return;
 
+            ClientMessage msg = MyAPIGateway.Utilities.SerializeFromBinary<ClientMessage>(data);
+            if (msg == null)
+                return;
+
+            if (msg.MessageType == ClientMessageType.FirstJoin)
+            {
+                clientActionRegistered = false;
+                MyLog.Default.WriteLine(ModName + " Seamless message - First Join");
+            }
+        }
         private void OnMessageEnteredSender(ulong sender, string messageText, ref bool sendToOthers)
         {
             messageText.ToLower();

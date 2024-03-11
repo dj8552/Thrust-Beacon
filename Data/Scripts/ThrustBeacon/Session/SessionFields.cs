@@ -2,6 +2,7 @@
 using DefenseShields;
 using Digi.Example_NetworkProtobuf;
 using Draygo.API;
+using ProtoBuf;
 using Sandbox.ModAPI;
 using System;
 using System.Collections.Concurrent;
@@ -44,7 +45,7 @@ namespace ThrustBeacon
         internal static int fadeTimeTicks = 0;
         internal static int stopDisplayTimeTicks = 0;
         internal static int keepTimeTicks = 0;
-        internal bool clientActionRegistered = false;
+        internal static bool clientActionRegistered = false;
         internal string primaryBeaconLabel = "[PRI]";
         internal IMyBeacon primaryBeacon;
         internal int clientLastBeaconDist = 0;
@@ -53,6 +54,7 @@ namespace ThrustBeacon
         internal static bool logging = true;
         internal static List<long> entityIDList = new List<long>();
         internal int lastLogRequestTick = 0;
+        public static ushort SeamlessClientNetId = 2936;
 
         //Sever specific
         internal static readonly List<MyStringHash> weaponSubtypeIDs = new List<MyStringHash>();
@@ -71,6 +73,25 @@ namespace ThrustBeacon
             weaponSubtypeIDs.Clear();
             GroupDict.Clear();
             ReadyLogs.Clear();
+        }
+
+        //Seamless
+        public enum ClientMessageType
+        {
+            FirstJoin,
+            TransferServer,
+            OnlinePlayers,
+        }
+
+        [ProtoContract]
+        public class ClientMessage
+        {
+            [ProtoMember(1)] public ClientMessageType MessageType;
+            [ProtoMember(2)] public byte[] MessageData;
+            [ProtoMember(3)] public long IdentityID;
+            [ProtoMember(4)] public ulong SteamID;
+            [ProtoMember(5)] public string PluginVersion = "0";
+            [ProtoMember(6)] public string NexusVersion;
         }
     }
 }

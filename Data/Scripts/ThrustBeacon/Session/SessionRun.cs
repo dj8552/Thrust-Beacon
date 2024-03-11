@@ -38,6 +38,7 @@ namespace ThrustBeacon
             if(Client)
             {
                 MyAPIGateway.Utilities.MessageEnteredSender += OnMessageEnteredSender;
+                MyAPIGateway.Multiplayer.RegisterSecureMessageHandler(SeamlessClientNetId, SeamlessMessageHandler);
             }
 
             //Init WC and register all defs on callback
@@ -72,6 +73,7 @@ namespace ThrustBeacon
             {
                 clientActionRegistered = true;
                 Session.Player.Controller.ControlledEntityChanged += GridChange;
+                GridChange(null, Session.Player.Controller.ControlledEntity);
                 MyLog.Default.WriteLineAndConsole(ModName + "Registered client ControlledEntityChanged action");
             }
 
@@ -247,9 +249,12 @@ namespace ThrustBeacon
             }
             if (Client)
             {
-                Save(Settings.Instance);                
-                if(clientActionRegistered)
+                Save(Settings.Instance);
+                if (clientActionRegistered)
+                {
+                    clientActionRegistered = false;
                     Session.Player.Controller.ControlledEntityChanged -= GridChange;
+                }
                 if (primaryBeacon != null)
                     Beacon_OnClosing(primaryBeacon);
                 MyAPIGateway.Utilities.MessageEnteredSender -= OnMessageEnteredSender;

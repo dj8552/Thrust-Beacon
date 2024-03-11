@@ -18,10 +18,10 @@ namespace ThrustBeacon
         public float SignalCooldown { get; set; }//Additive to cooldown mult.  For ex -0.05f would make a grid cooldown faster
         [ProtoMember(3)]
         [DefaultValue(0)]
-        public float SignalRange { get; set; }//Meters- Positive to make this grid detectable further, negative to decrease distance for being detected.
+        public int SignalRange { get; set; }//Meters- Positive to make this grid detectable further, negative to decrease distance for being detected.
         [ProtoMember(4)]
         [DefaultValue(0)]
-        public float DetectionRange { get; set; }//Meters- Positive to make detection of others possible at higher dist
+        public int DetectionRange { get; set; }//Meters- Positive to make detection of others possible at higher dist
     }
     public partial class Session
     {
