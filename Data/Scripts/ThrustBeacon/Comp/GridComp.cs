@@ -55,9 +55,9 @@ namespace ThrustBeacon
         internal void FatBlockAdded(MyCubeBlock block)
         {
             //Ownership update
-            if (block.CubeGrid.BigOwners != null && block.CubeGrid.BigOwners.Count > 0)
+            if (Grid.BigOwners != null && Grid.BigOwners.Count > 0)
             {
-                var faction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(block.CubeGrid.BigOwners[0]);
+                var faction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(Grid.BigOwners[0]);
                 factionID = faction == null ? 0 : faction.FactionId;
             }
 

@@ -19,7 +19,7 @@ namespace ThrustBeacon
                 var s = Settings.Instance;
                 var viewProjectionMat = Session.Camera.ViewMatrix * Session.Camera.ProjectionMatrix;
                 var camPos = Session.Camera.Position;
-                var playerEnt = MyAPIGateway.Session?.Player?.Controller?.ControlledEntity?.Entity?.Parent?.EntityId;
+                var playerEnt = MyAPIGateway.Session?.Player?.Controller?.ControlledEntity?.Entity?.Parent?.EntityId; //TODO eval if necessary with relation = 4 enum OR tap into GridChange event for this entityID cached as a session field
 
                 //Draw main signal list
                 foreach (var signal in SignalList.ToArray())
@@ -41,7 +41,7 @@ namespace ThrustBeacon
                         else if (contact.sizeEnum == 5 && (Tick + 15) % 60 <= 20)
                             warnColor = "<color=255, 255, 0>";
                         var info = new StringBuilder($"Broadcast Dist: " + dispRange + "\n" + "Size: " + warnColor + messageList[contact.sizeEnum]);
-                        var Label = new HudAPIv2.HUDMessage(info, s.signalDrawCoords, null, 2, s.textSizeOwn, true, true);
+                        var Label = new HudAPIv2.HUDMessage(info, s.signalDrawCoords, null, 2, s.textSizeOwn, true, true);  //TODO pull this to a single declared label and update visibility on GridChange?
                         Label.Visible = true;
 
                         //Optional beacon updates
