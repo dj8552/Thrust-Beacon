@@ -178,7 +178,7 @@ namespace ThrustBeacon
                 foreach (var thrust in thrustList)
                 {
                     var thrustOutput = thrust.Key.CurrentThrust;
-                    if (thrustOutput == 0)
+                    if (thrustOutput == 0 || !thrust.Key.IsFunctional)
                         continue;
                     rawThrustOutput += thrustOutput / thrust.Value;
                 }
@@ -193,7 +193,7 @@ namespace ThrustBeacon
                 foreach (var power in powerList)
                 {
                     var powerOutput = power.Key.CurrentOutput * 1000000; //convert MW to W
-                    if (powerOutput == 0)
+                    if (powerOutput == 0 || !power.Key.IsFunctional)
                         continue;
                     rawPowerOutput += powerOutput / power.Value;
                 }
