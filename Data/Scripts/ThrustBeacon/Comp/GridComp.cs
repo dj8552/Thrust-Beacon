@@ -167,6 +167,11 @@ namespace ThrustBeacon
             var ss = ServerSettings.Instance;
             broadcastDistOld = broadcastDist;
             broadcastDist = 0;
+
+            //Check if signal should be suppressed.  Needs to be here to report a zero sig to the grid group.
+            if (ss.SuppressSignalForNPCs && Session.npcFactions.Contains(factionID))
+                return;
+
             if (specialsDirty)
                 RecalcSpecials();
 

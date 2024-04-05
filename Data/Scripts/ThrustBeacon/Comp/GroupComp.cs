@@ -119,6 +119,7 @@ namespace ThrustBeacon
 
             //Faction ID and string from the grid with the most functional blocks in the group
             var tempCount = 0;
+            groupFactionID = 0;
             foreach (var grid in tempFactionDict)
             {
                 if (grid.Value > tempCount)
@@ -157,7 +158,7 @@ namespace ThrustBeacon
             }
 
             //Shutdown condition checks
-            if (faction == null || (ss.SuppressShutdownForNPCs && !Session.npcFactions.Contains(faction.FactionId)))
+            if (faction == null || (ss.SuppressShutdownForNPCs && !Session.npcFactions.Contains(groupFactionID)))
             {
                 if (ss.ShutdownPowerOverMaxSignal)
                 {

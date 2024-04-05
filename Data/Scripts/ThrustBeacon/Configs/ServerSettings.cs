@@ -89,6 +89,8 @@ namespace ThrustBeacon
         public bool UpdateBeaconOnControlledGrid { get; set; } = false;
         [ProtoMember(29)]
         public bool SuppressShutdownForNPCs { get; set; } = false;
+        [ProtoMember(30)]
+        public bool SuppressSignalForNPCs { get; set; } = false;
 
     }
     public partial class Session

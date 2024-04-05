@@ -167,8 +167,7 @@ namespace ThrustBeacon
         private void FactionCreated(long obj)
         {
             IMyFaction faction;
-            Session.Factions.Factions.TryGetValue(obj, out faction);
-            if (!faction.AcceptHumans || faction.IsEveryoneNpc())
+            if(Session.Factions.Factions.TryGetValue(obj, out faction) && (!faction.AcceptHumans || faction.IsEveryoneNpc()))
             {
                 if (!npcFactions.Contains(faction.FactionId))
                     npcFactions.Add(faction.FactionId);
