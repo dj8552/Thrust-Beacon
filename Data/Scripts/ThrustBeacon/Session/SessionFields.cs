@@ -64,6 +64,7 @@ namespace ThrustBeacon
         internal static List<GroupComp> powershutdownList = new List<GroupComp>();
         internal static Dictionary<IMyGridGroupData, GroupComp> GroupDict = new Dictionary<IMyGridGroupData, GroupComp>();
         internal static Dictionary<string, ulong> ReadyLogs = new Dictionary<string, ulong>();
+        internal static List<long> npcFactions = new List<long>();
 
         private void Clean()
         {

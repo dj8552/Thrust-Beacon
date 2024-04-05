@@ -164,6 +164,16 @@ namespace ThrustBeacon
                 GroupDict.Remove(group);
             }
         }
+        private void FactionCreated(long obj)
+        {
+            IMyFaction faction;
+            Session.Factions.Factions.TryGetValue(obj, out faction);
+            if (!faction.AcceptHumans || faction.IsEveryoneNpc())
+            {
+                if (!npcFactions.Contains(faction.FactionId))
+                    npcFactions.Add(faction.FactionId);
+            }
+        }
         private void OnMessageEnteredSender(ulong sender, string messageText, ref bool sendToOthers)
         {
             messageText.ToLower();

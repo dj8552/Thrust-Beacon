@@ -32,6 +32,10 @@ namespace ThrustBeacon
                 foreach(var group in groupStartList)
                     GridGroupsOnOnGridGroupCreated(group);
 
+                //Load NPC faction list
+                Session.Factions.FactionCreated += FactionCreated;
+                foreach(var faction in Session.Factions.Factions)
+                    FactionCreated(faction.Key);
                 //Hook connection event to send label list
                 MyVisualScriptLogicProvider.PlayerConnected += PlayerConnected;
             }
@@ -244,6 +248,7 @@ namespace ThrustBeacon
                 }
                 catch { }
                 MyVisualScriptLogicProvider.PlayerConnected -= PlayerConnected;
+                Session.Factions.FactionCreated -= FactionCreated;
             }
             if (Client)
             {

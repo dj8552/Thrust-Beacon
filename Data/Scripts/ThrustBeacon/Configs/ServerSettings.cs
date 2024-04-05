@@ -87,6 +87,8 @@ namespace ThrustBeacon
         public string LabelShutdown { get; set; } = "OVERHEAT - SHUTDOWN";
         [ProtoMember(28)]
         public bool UpdateBeaconOnControlledGrid { get; set; } = false;
+        [ProtoMember(29)]
+        public bool SuppressShutdownForNPCs { get; set; } = false;
 
     }
     public partial class Session

@@ -128,7 +128,7 @@ namespace ThrustBeacon
                 }
             }
             var faction = MyAPIGateway.Session.Factions.TryGetFactionById(groupFactionID);
-            groupFaction = faction == null? "": faction.Tag + ".";
+            groupFaction = faction == null ? "" : faction.Tag + ".";
 
             //Update size enum
             if (groupBroadcastDist < ss.Distance1)//Idle
@@ -155,30 +155,33 @@ namespace ThrustBeacon
             {
                 groupSizeEnum = 5;
             }
-           
+
             //Shutdown condition checks
-            if (ss.ShutdownPowerOverMaxSignal)
+            if (faction == null || (ss.SuppressShutdownForNPCs && !Session.npcFactions.Contains(faction.FactionId)))
             {
-                if (groupBroadcastDist >= ss.MaxSignalforPowerShutdown && !Session.powershutdownList.Contains(this))
+                if (ss.ShutdownPowerOverMaxSignal)
                 {
-                    Session.powershutdownList.Add(this);
+                    if (groupBroadcastDist >= ss.MaxSignalforPowerShutdown && !Session.powershutdownList.Contains(this))
+                    {
+                        Session.powershutdownList.Add(this);
+                    }
+                    else if (groupBroadcastDist < ss.MaxSignalforPowerShutdown && Session.powershutdownList.Contains(this))
+                    {
+                        Session.powershutdownList.Remove(this);
+                        TogglePowerOn();
+                    }
                 }
-                else if (groupBroadcastDist < ss.MaxSignalforPowerShutdown && Session.powershutdownList.Contains(this))
+                if (ss.ShutdownThrustersOverMaxSignal)
                 {
-                    Session.powershutdownList.Remove(this);
-                    TogglePowerOn();
-                }
-            }
-            if (ss.ShutdownThrustersOverMaxSignal)
-            {
-                if (groupBroadcastDist >= ss.MaxSignalforThrusterShutdown && !Session.thrustshutdownList.Contains(this))
-                {
-                    Session.thrustshutdownList.Add(this);
-                }
-                else if (groupBroadcastDist < ss.MaxSignalforThrusterShutdown && Session.thrustshutdownList.Contains(this))
-                {
-                    Session.thrustshutdownList.Remove(this);
-                    ToggleThrustOn();
+                    if (groupBroadcastDist >= ss.MaxSignalforThrusterShutdown && !Session.thrustshutdownList.Contains(this))
+                    {
+                        Session.thrustshutdownList.Add(this);
+                    }
+                    else if (groupBroadcastDist < ss.MaxSignalforThrusterShutdown && Session.thrustshutdownList.Contains(this))
+                    {
+                        Session.thrustshutdownList.Remove(this);
+                        ToggleThrustOn();
+                    }
                 }
             }
 
