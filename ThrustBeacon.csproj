@@ -162,6 +162,7 @@
     <Compile Include="Data\Scripts\ThrustBeacon\Comp\GroupComp.cs" />
     <Compile Include="Data\Scripts\ThrustBeacon\Comp\GridComp.cs" />
     <Compile Include="Data\Scripts\ThrustBeacon\Comp\SignalComp.cs" />
+    <Compile Include="Data\Scripts\ThrustBeacon\Configs\ServerDefaults.cs" />
     <Compile Include="Data\Scripts\ThrustBeacon\Session\ClientDraw.cs" />
     <Compile Include="Data\Scripts\ThrustBeacon\Configs\ServerSettings.cs" />
     <Compile Include="Data\Scripts\ThrustBeacon\Session\SessionEvents.cs">

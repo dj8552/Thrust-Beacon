@@ -66,26 +66,39 @@ namespace ThrustBeacon
                 LoadSignalProducerConfigs(); //Blocks that generate signal (thrust, power)
                 LoadBlockConfigs(); //Blocks that alter targeting
                 InitServerConfig(); //Overall settings
+                if (MyAPIGateway.Utilities.IsDedicated)
+                    InitDefaults();
             }
         }
 
         public override void UpdateBeforeSimulation()
         {
-            //Register client action of changing entity
-            if (Client && !clientActionRegistered && Session?.Player?.Controller != null)
+            if (Client)
             {
-                clientActionRegistered = true;
-                Session.Player.Controller.ControlledEntityChanged += GridChange;
-                GridChange(null, Session.Player.Controller.ControlledEntity);
-                MyLog.Default.WriteLineAndConsole(ModName + "Registered client ControlledEntityChanged action");
-            }
+                //Register client action of changing entity
+                if (!clientActionRegistered && Session?.Player?.Controller != null)
+                {
+                    clientActionRegistered = true;
+                    Session.Player.Controller.ControlledEntityChanged += GridChange;
+                    GridChange(null, Session.Player.Controller.ControlledEntity);
+                    MyLog.Default.WriteLineAndConsole(ModName + "Registered client ControlledEntityChanged action");
+                }
 
-            //Calc draw ratio figures based on resolution
-            if (Client && symbolHeight == 0)
-            {
-                aspectRatio = Session.Camera.ViewportSize.X / Session.Camera.ViewportSize.Y;
-                symbolHeight = Settings.Instance.symbolWidth * aspectRatio;
-                offscreenHeight = Settings.Instance.offscreenWidth * aspectRatio;
+                //Calc draw ratio figures based on resolution
+                if (symbolHeight == 0)
+                {
+                    aspectRatio = Session.Camera.ViewportSize.X / Session.Camera.ViewportSize.Y;
+                    symbolHeight = Settings.Instance.symbolWidth * aspectRatio;
+                    offscreenHeight = Settings.Instance.offscreenWidth * aspectRatio;
+                }
+
+                //If first load of this mod, send default settings request to server
+                if (firstLoad)
+                {
+                    Networking.SendToServer(new PacketRequestSettings(MyAPIGateway.Multiplayer.MyId));
+                    firstLoad = false;
+                    MyLog.Default.WriteLineAndConsole($"{ModName}: Requested default settings from server");
+                }
             }
 
             //Time keeps on ticking

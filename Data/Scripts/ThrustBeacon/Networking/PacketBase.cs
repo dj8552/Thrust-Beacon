@@ -1,10 +1,8 @@
 ﻿using ProtoBuf;
-using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
 using System.Collections.Generic;
 using ThrustBeacon;
 using VRage;
-using VRage.Game.Entity;
 using VRage.Utils;
 
 namespace Digi.Example_NetworkProtobuf
@@ -13,6 +11,8 @@ namespace Digi.Example_NetworkProtobuf
     [ProtoInclude(2000, typeof(PacketSignals))]
     [ProtoInclude(3000, typeof(PacketStatsRequest))]
     [ProtoInclude(4000, typeof(PacketStatsSend))]
+    [ProtoInclude(5000, typeof(PacketRequestSettings))]
+    [ProtoInclude(6000, typeof(PacketSendSettings))]
     [ProtoContract]
     public abstract class PacketBase
     {
@@ -125,6 +125,50 @@ namespace Digi.Example_NetworkProtobuf
         {
             MyAPIGateway.Utilities.ShowMissionScreen("Signal Report", "", "", Log, null, "Close");
             MyLog.Default.WriteLineAndConsole($"{Session.ModName}: Received log from server");
+            return false;
+        }
+    }
+    [ProtoContract]
+    public partial class PacketRequestSettings : PacketBase
+    {
+        [ProtoMember(500)]
+        public ulong SenderId;
+
+        public PacketRequestSettings() { } // Empty constructor required for deserialization
+        public PacketRequestSettings(ulong senderID)
+        {
+            SenderId = senderID;
+        }
+        public override bool Received()
+        {
+            if (Session.serverDefaults)
+            {
+                MyLog.Default.WriteLineAndConsole($"{Session.ModName}: Sent default settings to client at client request");
+                Session.Networking.SendToPlayer(new PacketSendSettings(Settings.Instance), SenderId);
+            }
+            return false;
+        }
+    }
+    [ProtoContract]
+    public partial class PacketSendSettings : PacketBase
+    {
+        [ProtoMember(600)]
+        public Settings Defaults;
+
+        public PacketSendSettings() { } // Empty constructor required for deserialization
+        public PacketSendSettings(Settings defaults)
+        {
+            Defaults = defaults;
+        }
+        public override bool Received()
+        {
+            MyLog.Default.WriteLineAndConsole($"{Session.ModName}: Received default settings from server");
+            Settings.Instance = Defaults;
+            Session.fadeTimeTicks = (int)(Defaults.fadeOutTime * 60);
+            Session.stopDisplayTimeTicks = (int)(Defaults.stopDisplayTime * 60);
+            Session.keepTimeTicks = (int)(Defaults.keepTime * 3600);
+            Session.symbolHeight = 0;
+            Session.Save(Settings.Instance);
             return false;
         }
     }

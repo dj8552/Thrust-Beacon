@@ -101,6 +101,7 @@ namespace ThrustBeacon
             }
             else
             {
+                firstLoad = true;
                 s = Settings.Default;
                 Save(s);
                 MyLog.Default.WriteLineAndConsole(ModName + "Saved default client config");
@@ -111,7 +112,7 @@ namespace ThrustBeacon
             MyLog.Default.WriteLineAndConsole(ModName + "Initialized client config");
 
         }
-        public void Save(Settings settings)
+        public static void Save(Settings settings)
         {
             var Filename = "Config.cfg";
             TextWriter writer;

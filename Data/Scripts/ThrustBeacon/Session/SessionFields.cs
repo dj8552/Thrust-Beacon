@@ -25,7 +25,7 @@ namespace ThrustBeacon
         internal static HudAPIv2 hudAPI;
         internal static WcApi wcAPI;
         internal static ShieldApi dsAPI;
-        public Networking Networking = new Networking(1212); //TODO: Pick a new number based on mod ID
+        public static Networking Networking = new Networking(1212); //TODO: Pick a new number based on mod ID
         Random rand = new Random();
         internal static string ModName = "[Thrust Beacon]"; //Since I may change the name, this is used in logging
         internal static List<string> messageList = new List<string>() { "Idle Sig", "Small Sig", "Medium Sig", "Large Sig", "Huge Sig", "Massive Sig", "OVERHEAT - SHUTDOWN" };
@@ -54,6 +54,7 @@ namespace ThrustBeacon
         internal static bool logging = true;
         internal static List<long> entityIDList = new List<long>();
         internal int lastLogRequestTick = 0;
+        internal static bool firstLoad = false;
 
         //Sever specific
         internal static readonly List<MyStringHash> weaponSubtypeIDs = new List<MyStringHash>();
@@ -65,6 +66,7 @@ namespace ThrustBeacon
         internal static Dictionary<IMyGridGroupData, GroupComp> GroupDict = new Dictionary<IMyGridGroupData, GroupComp>();
         internal static Dictionary<string, ulong> ReadyLogs = new Dictionary<string, ulong>();
         internal static List<long> npcFactions = new List<long>();
+        internal static bool serverDefaults = false;
 
         private void Clean()
         {

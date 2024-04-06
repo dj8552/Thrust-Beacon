@@ -321,6 +321,8 @@ namespace ThrustBeacon
             Grid.OnFatBlockAdded -= FatBlockAdded;
             Grid.OnFatBlockRemoved -= FatBlockRemoved;
             Grid.OnBlockOwnershipChanged -= OnBlockOwnershipChanged;
+            foreach (var thruster in thrustMonitor.Keys)
+                thruster.ThrustChanged -= Thruster_ThrustChanged;
             thrustMonitor.Clear();
 
             Grid = null;
