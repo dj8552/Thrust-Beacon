@@ -158,7 +158,8 @@ namespace ThrustBeacon
             }
 
             //Shutdown condition checks
-            if (faction == null || (ss.SuppressShutdownForNPCs && !Session.npcFactions.Contains(groupFactionID)))
+            var npcFaction = Session.npcFactions.Contains(groupFactionID);
+            if (!npcFaction || (!ss.SuppressShutdownForNPCs && npcFaction))
             {
                 if (ss.ShutdownPowerOverMaxSignal)
                 {
