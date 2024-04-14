@@ -28,6 +28,7 @@ namespace ThrustBeacon
         internal int funcCount = 0;
         internal bool gridLogging = false;
         internal string gridLog = "";
+        internal float detailRange = 0f;
         
         internal void Init(MyCubeGrid grid, IMyGridGroupData myGroup)
         {
@@ -164,6 +165,7 @@ namespace ThrustBeacon
                 coolDownRate = ServerSettings.Instance.SmallGridCooldownRate;
             detectionRange = 0;
             signalRange = 0;
+            detailRange = 0f;
 
             foreach (var special in specials)
             {
@@ -174,6 +176,7 @@ namespace ThrustBeacon
                 coolDownRate += cfg.SignalCooldown;
                 detectionRange += cfg.DetectionRange;
                 signalRange += cfg.SignalRange;
+                detailRange += cfg.DetailRange;
             }
             specialsDirty = false;
         }
@@ -286,6 +289,8 @@ namespace ThrustBeacon
                         gridLog += $"\n    Signal Range Mod: {signalRange}m";
                     if (detectionRange != 0)
                         gridLog += $"\n    Detection Range Mod: {detectionRange}m";
+                    if (detailRange != 0)
+                        gridLog += $"\n    Detail Range Mod: {detailRange}%";
                 }
                 gridLogging = false;
             }

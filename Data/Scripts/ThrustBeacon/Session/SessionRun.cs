@@ -121,6 +121,7 @@ namespace ThrustBeacon
             #region ServerLoop
             if (Server)
             {
+                var ss = ServerSettings.Instance;
                 //Update grid comps to recalc signals on a background thread.  Rand element to make blipping the gas to avoid detection harder
                 foreach (var group in GroupDict.Values)
                 {
@@ -162,12 +163,14 @@ namespace ThrustBeacon
                     //Pull modifiers for current players grid (IE if it has increased detection range)
                     var controlledGrid = (IMyCubeGrid)player.Controller?.ControlledEntity?.Entity?.Parent;
                     var playerGridDetectionModSqr = 0f;
+                    var playerGridDetailMod = 0f;
                     if (controlledGrid != null)
                     {
                         var playerComp = GroupDict[controlledGrid.GetGridGroup(GridLinkTypeEnum.Mechanical)];
                             playerGridDetectionModSqr = playerComp.groupDetectionRange * playerComp.groupDetectionRange;
                             if (playerComp.groupDetectionRange < 0)
                                 playerGridDetectionModSqr *= -1;
+                        playerGridDetailMod = playerComp.groupDetailMod;
                     }
 
                     var playerFaction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(player.IdentityId);
@@ -185,18 +188,24 @@ namespace ThrustBeacon
                         //Check if current grid is in detection range of the player
                         if (playerGrid || distToTargSqr <= group.groupBroadcastDistSqr + playerGridDetectionModSqr)
                         {
+                            var masked = ss.EnableDataMasking && distToTargSqr > group.groupBroadcastDistSqr * (ss.DataMaskingRange + playerGridDetailMod) * (ss.DataMaskingRange + playerGridDetailMod);
+                            var sameFaction = playerFaction.FactionId == group.groupFactionID;
                             var signalData = new SignalComp();
                             signalData.position = (Vector3I)gridPos;
                             signalData.range = playerGrid ? group.groupBroadcastDist : (int)Math.Sqrt(distToTargSqr);
-                            signalData.faction = group.groupFaction;
+                            signalData.faction = masked && !sameFaction ? "" : group.groupFaction;
                             signalData.entityID = playerGrid ? controlledGrid.EntityId : group.GridDict.FirstPair().Key.EntityId;
                             signalData.sizeEnum = group.groupSizeEnum;
-                            if (playerGrid)
+                            if (playerGrid) //Own grid
                                 signalData.relation = 4;
-                            else if (!playerGrid && playerFaction != null)
+                            else if (!masked && !playerGrid && playerFaction != null && !sameFaction)//Not in player faction
                                 signalData.relation = (byte)MyAPIGateway.Session.Factions.GetRelationBetweenFactions(playerFaction.FactionId, group.groupFactionID);
-                            else
+                            else if (playerFaction != null && sameFaction)//In player faction
+                                signalData.relation = 3;
+                            else if (!masked)//Factionless, presumed hostile
                                 signalData.relation = 1;
+                            else if (masked)//Outside detail range, mask data
+                                signalData.relation = 2;
                             validSignalList.Add(signalData);
                         }
                     }

@@ -29,7 +29,9 @@ namespace ThrustBeacon
             SendSignalDataToSuits = false, //If false, characters outside of grids will not get beacon updates
             IncludeShieldHPInSignal = true,
             DefaultShieldHPDivisor = 50,
-            UpdateBeaconOnControlledGrid = false
+            UpdateBeaconOnControlledGrid = false,
+            EnableDataMasking = false,
+
         };
         [ProtoMember(1)]
         public bool IncludePowerInSignal { get; set; } = true;
@@ -91,6 +93,10 @@ namespace ThrustBeacon
         public bool SuppressShutdownForNPCs { get; set; } = false;
         [ProtoMember(30)]
         public bool SuppressSignalForNPCs { get; set; } = false;
+        [ProtoMember(31)]
+        public bool EnableDataMasking { get; set; } = false;
+        [ProtoMember(32)]
+        public float DataMaskingRange { get; set; } = 0.75f;
 
     }
     public partial class Session

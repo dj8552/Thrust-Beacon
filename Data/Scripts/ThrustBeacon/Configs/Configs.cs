@@ -22,6 +22,9 @@ namespace ThrustBeacon
         [ProtoMember(4)]
         [DefaultValue(0)]
         public int DetectionRange { get; set; }//Meters- Positive to make detection of others possible at higher dist
+        [ProtoMember(5)]
+        [DefaultValue(0)]
+        public float DetailRange { get; set; }//% modifier to range to show details on signals.  >0 will make details visible further away if data masking is enabled
     }
     public partial class Session
     {
@@ -59,7 +62,8 @@ namespace ThrustBeacon
             {
             new BlockConfig() {subTypeID = "heatsinkExample", SignalRange = 1000, SignalCooldown = -0.02f},
             new BlockConfig() {subTypeID = "detectionAntenna", SignalRange = 2500, DetectionRange = 5000},
-            new BlockConfig() {subTypeID = "stealthDrive", SignalRange = -10000, SignalCooldown = 0.01f, DetectionRange = -2500}
+            new BlockConfig() {subTypeID = "stealthDrive", SignalRange = -10000, SignalCooldown = 0.01f, DetectionRange = -2500},
+            new BlockConfig() {subTypeID = "iffModule", SignalRange = 5000, DetailRange = 0.10f}
             };
 
             TextWriter writer;

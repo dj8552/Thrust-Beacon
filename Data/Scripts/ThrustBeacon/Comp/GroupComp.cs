@@ -26,6 +26,7 @@ namespace ThrustBeacon
         internal bool groupLogging = false;
         internal string groupLog = "";
         internal ulong groupLogRequestor = 0;
+        internal float groupDetailMod = 0;
 
         internal void InitGrids()
         {
@@ -85,6 +86,7 @@ namespace ThrustBeacon
             groupDetectionRange = 0;
             groupBroadcastDist = 0;
             groupBroadcastDistSqr = 0;
+            groupDetailMod = 0f;
 
             var tempFactionDict = new Dictionary<long, int>();
             var tempGroupSphere = new BoundingSphereD(Vector3D.Zero, double.MinValue);
@@ -105,6 +107,7 @@ namespace ThrustBeacon
                 groupBroadcastDist += gridComp.broadcastDist;
                 groupSignalRange += gridComp.signalRange;
                 groupDetectionRange += gridComp.detectionRange;
+                groupDetailMod += gridComp.detailRange;
 
                 if (groupLogging && gridComp.gridLog.Length > 0)
                 {
