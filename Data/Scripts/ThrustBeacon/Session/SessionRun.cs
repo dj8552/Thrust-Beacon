@@ -193,7 +193,7 @@ namespace ThrustBeacon
                         if (playerGrid || distToTargSqr <= group.groupBroadcastDistSqr + playerGridDetectionModSqr)
                         {
                             var masked = ss.EnableDataMasking && distToTargSqr > group.groupBroadcastDistSqr * (ss.DataMaskingRange + playerGridDetailMod) * (ss.DataMaskingRange + playerGridDetailMod);
-                            var sameFaction = playerFaction.FactionId == group.groupFactionID;
+                            var sameFaction = playerFaction != null && playerFaction.FactionId == group.groupFactionID;
                             var signalData = new SignalComp();
                             signalData.position = (Vector3I)gridPos;
                             signalData.range = playerGrid ? group.groupBroadcastDist : (int)Math.Sqrt(distToTargSqr);
