@@ -148,7 +148,7 @@ namespace ThrustBeacon
                 var tickMod = Tick % 100;
                 foreach (var player in PlayerList)
                 {
-                    if (player == null || player.IsBot || player.Character == null || (MPActive && player.SteamUserId == 0) || (player.IdentityId % 100 != tickMod) || (!ServerSettings.Instance.SendSignalDataToSuits && player.Controller.ControlledEntity is IMyCharacter))
+                    if (player == null || player.IsBot || player.Character == null || (MPActive && player.SteamUserId == 0) || (player.IdentityId % 100 != tickMod) || (!ServerSettings.Instance.SendSignalDataToSuits && player.Controller?.ControlledEntity is IMyCharacter))
                     {
                         continue;
                     }
@@ -166,11 +166,15 @@ namespace ThrustBeacon
                     var playerGridDetailMod = 0f;
                     if (controlledGrid != null)
                     {
-                        var playerComp = GroupDict[controlledGrid.GetGridGroup(GridLinkTypeEnum.Mechanical)];
+                        GroupComp playerComp;
+                        if (GroupDict.TryGetValue(controlledGrid.GetGridGroup(GridLinkTypeEnum.Mechanical), out playerComp))
+                        { 
+                            //var playerComp = GroupDict[controlledGrid.GetGridGroup(GridLinkTypeEnum.Mechanical)];
                             playerGridDetectionModSqr = playerComp.groupDetectionRange * playerComp.groupDetectionRange;
                             if (playerComp.groupDetectionRange < 0)
                                 playerGridDetectionModSqr *= -1;
-                        playerGridDetailMod = playerComp.groupDetailMod;
+                            playerGridDetailMod = playerComp.groupDetailMod;
+                        }
                     }
 
                     var playerFaction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(player.IdentityId);
