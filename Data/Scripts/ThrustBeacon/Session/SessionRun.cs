@@ -204,7 +204,7 @@ namespace ThrustBeacon
                                 signalData.relation = 4;
                             else if (!masked && !playerGrid && playerFaction != null && !sameFaction)//Not in player faction
                                 signalData.relation = (byte)MyAPIGateway.Session.Factions.GetRelationBetweenFactions(playerFaction.FactionId, group.groupFactionID);
-                            else if (playerFaction != null && sameFaction)//In player faction
+                            else if (sameFaction)//In player faction
                                 signalData.relation = 3;
                             else if (!masked)//Factionless, presumed hostile
                                 signalData.relation = 1;
