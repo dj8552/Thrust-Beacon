@@ -30,6 +30,7 @@ namespace ThrustBeacon
         //Send newly connected clients server-specific data (label text)
         private void PlayerConnected(long playerId)
         {
+            PlayerList.Clear();
             MyAPIGateway.Players.GetPlayers(PlayerList);
             foreach (var player in PlayerList)
             {
