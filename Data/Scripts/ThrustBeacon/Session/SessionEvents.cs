@@ -30,16 +30,15 @@ namespace ThrustBeacon
         //Send newly connected clients server-specific data (label text)
         private void PlayerConnected(long playerId)
         {
-            MyAPIGateway.Players.GetPlayers(PlayerList);
-            foreach (var player in PlayerList)
+            MyLog.Default.WriteLineAndConsole($"{ModName}Player connected " + playerId);
+            var steamId = MyAPIGateway.Multiplayer.Players.TryGetSteamId(playerId);
+            if (steamId != 0)
             {
-                if (player.IdentityId == playerId && !player.IsBot)
-                {
-                    var steamId = MyAPIGateway.Multiplayer.Players.TryGetSteamId(playerId);
-                    Networking.SendToPlayer(new PacketSettings(messageList, ServerSettings.Instance.UpdateBeaconOnControlledGrid), steamId);
-                    MyLog.Default.WriteLineAndConsole($"{ModName}Sent settings to player " + steamId);
-                }
+                Networking.SendToPlayer(new PacketSettings(messageList, ServerSettings.Instance.UpdateBeaconOnControlledGrid), steamId);
+                MyLog.Default.WriteLineAndConsole($"{ModName}Sent settings to player " + steamId);
             }
+            else
+                MyLog.Default.WriteLineAndConsole($"{ModName}Failed to find steam ID for playerId " + playerId);
         }
 
         //Dump current signals when hopping out of a grid
