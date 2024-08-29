@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using VRage;
 using VRage.Game.Components;
 using VRage.Game.ModAPI;
+using VRage.ModAPI;
 using VRage.Utils;
 using VRageMath;
 
@@ -56,7 +57,7 @@ namespace ThrustBeacon
         internal int lastLogRequestTick = 0;
         internal static bool firstLoad = false;
 
-        //Sever specific
+        //Server specific
         internal static readonly List<MyStringHash> weaponSubtypeIDs = new List<MyStringHash>();
         internal static readonly Dictionary<string, int> SignalProducer = new Dictionary<string, int>();
         internal static readonly Dictionary<MyStringHash, BlockConfig> BlockConfigs = new Dictionary<MyStringHash, BlockConfig>();
@@ -67,6 +68,8 @@ namespace ThrustBeacon
         internal static Dictionary<string, ulong> ReadyLogs = new Dictionary<string, ulong>();
         internal static List<long> npcFactions = new List<long>();
         internal static bool serverDefaults = false;
+        internal List<BoundingSphereD> planetSpheres = new List<BoundingSphereD>();
+        internal HashSet<IMyEntity> entityHash = new HashSet<IMyEntity>();
 
         private void Clean()
         {
@@ -75,6 +78,7 @@ namespace ThrustBeacon
             weaponSubtypeIDs.Clear();
             GroupDict.Clear();
             ReadyLogs.Clear();
+            planetSpheres.Clear();
         }
 
         //Seamless

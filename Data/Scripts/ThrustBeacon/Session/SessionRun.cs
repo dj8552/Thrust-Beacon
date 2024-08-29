@@ -13,6 +13,7 @@ using Sandbox.Game;
 using Sandbox.Game.Entities;
 using VRage.Game.Entity;
 using VRage;
+using VRage.ModAPI;
 
 namespace ThrustBeacon
 {
@@ -27,6 +28,8 @@ namespace ThrustBeacon
                 //Register group actions and init existing groups
                 MyAPIGateway.GridGroups.OnGridGroupCreated += GridGroupsOnOnGridGroupCreated;
                 MyAPIGateway.GridGroups.OnGridGroupDestroyed += GridGroupsOnOnGridGroupDestroyed;
+                MyAPIGateway.Entities.GetEntities(entityHash, CheckPlanets);
+                entityHash.Clear();
                 var groupStartList = new List<IMyGridGroupData>();
                 MyAPIGateway.GridGroups.GetGridGroups(GridLinkTypeEnum.Mechanical, groupStartList);
                 foreach(var group in groupStartList)
@@ -48,6 +51,20 @@ namespace ThrustBeacon
             wcAPI = new WcApi();
             wcAPI.Load(RegisterWCDefs, true);
         }
+
+        private bool CheckPlanets(IMyEntity entity)
+        {
+            if(entity is MyPlanet)
+            {
+                var planet = (MyPlanet)entity;
+                
+                var sphere = new BoundingSphereD(planet.PositionComp.WorldVolume.Center, planet.AverageRadius + planet.AtmosphereAltitude);
+                planetSpheres.Add(sphere);
+                MyLog.Default.WriteLine($"{ModName} Planet added {planet.Name} {planet.MinimumRadius} {planet.AverageRadius} {planet.MaximumRadius} {planet.AtmosphereRadius} {planet.AtmosphereAltitude}");
+            }
+            return false;
+        }
+
         public override void LoadData()
         {
             MPActive = MyAPIGateway.Multiplayer.MultiplayerActive;
@@ -188,30 +205,47 @@ namespace ThrustBeacon
                         if ((!playerGrid && group.groupBroadcastDist < 2) || stealth || group.groupFuncCount == 0) continue;
                         var gridPos = group.groupSphere.Center;
                         var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
+                        if (!playerGrid && distToTargSqr > group.groupBroadcastDistSqr + playerGridDetectionModSqr) continue; //Distance check
 
-                        //Check if current grid is in detection range of the player
-                        if (playerGrid || distToTargSqr <= group.groupBroadcastDistSqr + playerGridDetectionModSqr)
+                        var planetOcclusion = false;
+                        if (!playerGrid)
                         {
-                            var masked = ss.EnableDataMasking && distToTargSqr > group.groupBroadcastDistSqr * (ss.DataMaskingRange + playerGridDetailMod) * (ss.DataMaskingRange + playerGridDetailMod);
-                            var sameFaction = playerFaction != null && playerFaction.FactionId == group.groupFactionID;
-                            var signalData = new SignalComp();
-                            signalData.position = (Vector3I)gridPos;
-                            signalData.range = playerGrid ? group.groupBroadcastDist : (int)Math.Sqrt(distToTargSqr);
-                            signalData.faction = masked && !sameFaction ? "" : group.groupFaction;
-                            signalData.entityID = playerGrid ? controlledGrid.EntityId : group.GridDict.FirstPair().Key.EntityId;
-                            signalData.sizeEnum = group.groupSizeEnum;
-                            if (playerGrid) //Own grid
-                                signalData.relation = 4;
-                            else if (!masked && !playerGrid && playerFaction != null && !sameFaction)//Not in player faction
-                                signalData.relation = (byte)MyAPIGateway.Session.Factions.GetRelationBetweenFactions(playerFaction.FactionId, group.groupFactionID);
-                            else if (playerFaction != null && sameFaction)//In player faction
-                                signalData.relation = 3;
-                            else if (!masked)//Factionless, presumed hostile
-                                signalData.relation = 1;
-                            else if (masked)//Outside detail range, mask data
-                                signalData.relation = 2;
-                            validSignalList.Add(signalData);
+                            var dirRay = new RayD(playerPos, Vector3D.Normalize(gridPos - playerPos));
+                            foreach (var planet in planetSpheres)
+                            {
+                                var hitDist = dirRay.Intersects(planet);
+                                if (hitDist != null && hitDist * hitDist < distToTargSqr)
+                                {
+                                    var onPlanet = planet.Contains(gridPos) == ContainmentType.Contains;
+                                    if (!onPlanet || (onPlanet && Vector3D.DistanceSquared(planet.Center, gridPos) <= distToTargSqr))
+                                    {
+                                        planetOcclusion = true;
+                                        break;
+                                    }
+                                }
+                            }
                         }
+                        if (planetOcclusion) continue;
+
+                        var masked = ss.EnableDataMasking && distToTargSqr > group.groupBroadcastDistSqr * (ss.DataMaskingRange + playerGridDetailMod) * (ss.DataMaskingRange + playerGridDetailMod);
+                        var sameFaction = playerFaction != null && playerFaction.FactionId == group.groupFactionID;
+                        var signalData = new SignalComp();
+                        signalData.position = (Vector3I)gridPos;
+                        signalData.range = playerGrid ? group.groupBroadcastDist : (int)Math.Sqrt(distToTargSqr);
+                        signalData.faction = masked && !sameFaction ? "" : group.groupFaction;
+                        signalData.entityID = playerGrid ? controlledGrid.EntityId : group.GridDict.FirstPair().Key.EntityId;
+                        signalData.sizeEnum = group.groupSizeEnum;
+                        if (playerGrid) //Own grid
+                            signalData.relation = 4;
+                        else if (!masked && !playerGrid && playerFaction != null && !sameFaction)//Not in player faction
+                            signalData.relation = (byte)MyAPIGateway.Session.Factions.GetRelationBetweenFactions(playerFaction.FactionId, group.groupFactionID);
+                        else if (playerFaction != null && sameFaction)//In player faction
+                            signalData.relation = 3;
+                        else if (!masked)//Factionless, presumed hostile
+                            signalData.relation = 1;
+                        else if (masked)//Outside detail range, mask data
+                            signalData.relation = 2;
+                        validSignalList.Add(signalData);
                     }
                     //If there's anything to send to the player, fire it off via the Networking or call the packet received method for SP
                     if(validSignalList.Count>0)
