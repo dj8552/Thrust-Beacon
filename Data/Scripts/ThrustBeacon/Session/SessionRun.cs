@@ -209,25 +209,28 @@ namespace ThrustBeacon
                         if (!playerGrid && distToTargSqr > group.groupBroadcastDistSqr + playerGridDetectionModSqr) continue; //Distance check
 
                         //Check if occluded by a planet
-                        var planetOcclusion = false;
-                        if (!playerGrid)
+                        if (ss.EnablePlanetOcclusion)
                         {
-                            var dirRay = new RayD(playerPos, Vector3D.Normalize(gridPos - playerPos));//Pseudo ray from target to viewer
-                            foreach (var planet in planetSpheres)
+                            var planetOcclusion = false;
+                            if (!playerGrid)
                             {
-                                var hitDist = dirRay.Intersects(planet);
-                                if (hitDist != null && hitDist * hitDist < distToTargSqr)//Check if ray hit planet sphere, and check if planet is beyond sig emitter
+                                var dirRay = new RayD(playerPos, Vector3D.Normalize(gridPos - playerPos));//Pseudo ray from target to viewer
+                                foreach (var planet in planetSpheres)
                                 {
-                                    var onPlanet = planet.Contains(gridPos) == ContainmentType.Contains;//Check if on planet
-                                    if (!onPlanet || (onPlanet && Vector3D.DistanceSquared(planet.Center, gridPos) <= distToTargSqr))//Check if signal emitter or center of planet is closer, should catch cases where emitter is on the surface but not beyond horizon
+                                    var hitDist = dirRay.Intersects(planet);
+                                    if (hitDist != null && hitDist * hitDist < distToTargSqr)//Check if ray hit planet sphere, and check if planet is beyond sig emitter
                                     {
-                                        planetOcclusion = true;
-                                        break;
+                                        var onPlanet = planet.Contains(gridPos) == ContainmentType.Contains;//Check if on planet
+                                        if (!onPlanet || (onPlanet && Vector3D.DistanceSquared(planet.Center, gridPos) <= distToTargSqr))//Check if signal emitter or center of planet is closer, should catch cases where emitter is on the surface but not beyond horizon
+                                        {
+                                            planetOcclusion = true;
+                                            break;
+                                        }
                                     }
                                 }
                             }
+                            if (planetOcclusion) continue;
                         }
-                        if (planetOcclusion) continue;
 
                         //Faction/relation checking and signal data compilation
                         var masked = ss.EnableDataMasking && distToTargSqr > group.groupBroadcastDistSqr * (ss.DataMaskingRange + playerGridDetailMod) * (ss.DataMaskingRange + playerGridDetailMod);

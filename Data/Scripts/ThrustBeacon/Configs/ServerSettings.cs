@@ -36,7 +36,7 @@ namespace ThrustBeacon
             CombineBeyond = 75000,
             CombineIncrementSize = true,
             CombineIncludeQuantity = false,
-            EnablePlanetOcclusion = false,
+            EnablePlanetOcclusion = true,
         };
         [ProtoMember(1)]
         public bool IncludePowerInSignal { get; set; } = true;
