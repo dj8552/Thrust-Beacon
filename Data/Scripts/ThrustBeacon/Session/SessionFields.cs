@@ -70,6 +70,8 @@ namespace ThrustBeacon
         internal static bool serverDefaults = false;
         internal List<BoundingSphereD> planetSpheres = new List<BoundingSphereD>();
         internal HashSet<IMyEntity> entityHash = new HashSet<IMyEntity>();
+        internal long combineDistSqr;
+        internal bool useCombine;
 
         private void Clean()
         {

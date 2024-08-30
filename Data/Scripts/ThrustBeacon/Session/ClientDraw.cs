@@ -89,7 +89,8 @@ namespace ThrustBeacon
                             var dispRange = distance > 1000 ? (distance / 1000).ToString("0.#") + " km" : distance.ToString("0.#") + " m";
                             //var dispSize = contact.range > 1000 ? (contact.range / 1000).ToString("0.#") + " km" : contact.range.ToString("0.#") + " m";
                             //var info = new StringBuilder(contact.faction + " " + dispSize + " sig " + "\n" + dispRange); //Testing alternate display
-                            var info = new StringBuilder(contact.faction + messageList[contact.sizeEnum] + "\n" + dispRange);
+                            var qty = contact.quantity > 1 ? contact.quantity + "x " : "";
+                            var info = new StringBuilder(qty + contact.faction + messageList[contact.sizeEnum] + "\n" + dispRange);
                             var Label = new HudAPIv2.HUDMessage(info, labelPosition, new Vector2D(0, -0.001), 2, s.textSize, true, true);
                             Label.InitialColor = adjColor;
                             Label.Visible = true;

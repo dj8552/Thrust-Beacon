@@ -31,7 +31,12 @@ namespace ThrustBeacon
             DefaultShieldHPDivisor = 50,
             UpdateBeaconOnControlledGrid = false,
             EnableDataMasking = false,
-
+            DataMaskingRange = 0.75f,
+            CombineRange = 5000,
+            CombineBeyond = 75000,
+            CombineIncrementSize = true,
+            CombineIncludeQuantity = false,
+            EnablePlanetOcclusion = false,
         };
         [ProtoMember(1)]
         public bool IncludePowerInSignal { get; set; } = true;
@@ -97,6 +102,16 @@ namespace ThrustBeacon
         public bool EnableDataMasking { get; set; } = false;
         [ProtoMember(32)]
         public float DataMaskingRange { get; set; } = 0.75f;
+        [ProtoMember(33)]
+        public int CombineRange { get; set; } = 5000;
+        [ProtoMember(34)]
+        public int CombineBeyond { get; set; } = 75000;
+        [ProtoMember(35)]
+        public bool CombineIncrementSize { get; set; } = true;
+        [ProtoMember(36)]
+        public bool CombineIncludeQuantity { get; set; } = false;
+        [ProtoMember(37)]
+        public bool EnablePlanetOcclusion { get; set; } = true;
 
     }
     public partial class Session
@@ -138,6 +153,8 @@ namespace ThrustBeacon
             //SP writes to local variables, handled by packets w/ networking in MP
             messageList = new List<string>() {settings.Label1, settings.Label2, settings.Label3, settings.Label4, settings.Label5, settings.Label6, settings.LabelShutdown};
             clientUpdateBeacon = settings.UpdateBeaconOnControlledGrid;
+            combineDistSqr = settings.CombineBeyond * settings.CombineBeyond;
+            useCombine = settings.CombineBeyond > 0 && settings.CombineRange > 0;
             var Filename = "ServerConfig.cfg";
             TextWriter writer;
             writer = MyAPIGateway.Utilities.WriteFileInWorldStorage(Filename, typeof(ServerSettings));

@@ -196,6 +196,7 @@ namespace ThrustBeacon
 
                     var playerFaction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(player.IdentityId);
                     var validSignalList = new List<SignalComp>();
+                    var tempSignalList = new List<SignalComp>();
 
                     //For each player, iterate each grid
                     foreach (var group in GroupDict.Values)
@@ -207,17 +208,18 @@ namespace ThrustBeacon
                         var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
                         if (!playerGrid && distToTargSqr > group.groupBroadcastDistSqr + playerGridDetectionModSqr) continue; //Distance check
 
+                        //Check if occluded by a planet
                         var planetOcclusion = false;
                         if (!playerGrid)
                         {
-                            var dirRay = new RayD(playerPos, Vector3D.Normalize(gridPos - playerPos));
+                            var dirRay = new RayD(playerPos, Vector3D.Normalize(gridPos - playerPos));//Pseudo ray from target to viewer
                             foreach (var planet in planetSpheres)
                             {
                                 var hitDist = dirRay.Intersects(planet);
-                                if (hitDist != null && hitDist * hitDist < distToTargSqr)
+                                if (hitDist != null && hitDist * hitDist < distToTargSqr)//Check if ray hit planet sphere, and check if planet is beyond sig emitter
                                 {
-                                    var onPlanet = planet.Contains(gridPos) == ContainmentType.Contains;
-                                    if (!onPlanet || (onPlanet && Vector3D.DistanceSquared(planet.Center, gridPos) <= distToTargSqr))
+                                    var onPlanet = planet.Contains(gridPos) == ContainmentType.Contains;//Check if on planet
+                                    if (!onPlanet || (onPlanet && Vector3D.DistanceSquared(planet.Center, gridPos) <= distToTargSqr))//Check if signal emitter or center of planet is closer, should catch cases where emitter is on the surface but not beyond horizon
                                     {
                                         planetOcclusion = true;
                                         break;
@@ -227,6 +229,7 @@ namespace ThrustBeacon
                         }
                         if (planetOcclusion) continue;
 
+                        //Faction/relation checking and signal data compilation
                         var masked = ss.EnableDataMasking && distToTargSqr > group.groupBroadcastDistSqr * (ss.DataMaskingRange + playerGridDetailMod) * (ss.DataMaskingRange + playerGridDetailMod);
                         var sameFaction = playerFaction != null && playerFaction.FactionId == group.groupFactionID;
                         var signalData = new SignalComp();
@@ -237,18 +240,52 @@ namespace ThrustBeacon
                         signalData.sizeEnum = group.groupSizeEnum;
                         if (playerGrid) //Own grid
                             signalData.relation = 4;
-                        else if (!masked && !playerGrid && playerFaction != null && !sameFaction)//Not in player faction
+                        else if (!masked && !playerGrid && !sameFaction)//Not in player faction
                             signalData.relation = (byte)MyAPIGateway.Session.Factions.GetRelationBetweenFactions(playerFaction.FactionId, group.groupFactionID);
-                        else if (playerFaction != null && sameFaction)//In player faction
+                        else if (sameFaction)//In player faction
                             signalData.relation = 3;
                         else if (!masked)//Factionless, presumed hostile
                             signalData.relation = 1;
                         else if (masked)//Outside detail range, mask data
                             signalData.relation = 2;
-                        validSignalList.Add(signalData);
+
+                        if (!useCombine || signalData.relation == 4 || signalData.range <= ss.CombineBeyond) //Add own grid or those within aggregate dist to final sig list
+                            validSignalList.Add(signalData);
+                        else
+                            tempSignalList.Add(signalData); //Add others to list for aggregate processing
                     }
+
+
+                    //Aggregate signals by proximity
+                    var removalList = new List<int>();
+                    while (tempSignalList.Count > 0)
+                    {
+                        var sig = tempSignalList[0];
+                        tempSignalList.RemoveAtFast(0);
+                        for (int i = 0; i < tempSignalList.Count; i++) 
+                        {
+                            var checkSig = tempSignalList[i];
+                            if (sig.faction == checkSig.faction && Vector3.DistanceSquared(sig.position, checkSig.position) <= combineDistSqr) //Within aggregation distance
+                            {
+                                sig.position = (sig.position + checkSig.position) / 2;//Re-average position
+                                if(ss.CombineIncludeQuantity)
+                                    sig.quantity ++;
+                                if(ss.CombineIncrementSize && sig.sizeEnum < 5)
+                                    sig.sizeEnum ++;
+                                removalList.Add(i);
+                            }
+                        }
+                        validSignalList.Add(sig);
+                        if (removalList.Count > 0)
+                        {
+                            tempSignalList.RemoveIndices(removalList);
+                            removalList.Clear();
+                        }
+                    }
+
+
                     //If there's anything to send to the player, fire it off via the Networking or call the packet received method for SP
-                    if(validSignalList.Count>0)
+                    if (validSignalList.Count > 0)
                     {
                         var packet = new PacketSignals(validSignalList);
                         if (MPActive)
