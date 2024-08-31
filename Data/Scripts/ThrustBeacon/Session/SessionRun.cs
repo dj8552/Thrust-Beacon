@@ -243,7 +243,7 @@ namespace ThrustBeacon
                         signalData.sizeEnum = group.groupSizeEnum;
                         if (playerGrid) //Own grid
                             signalData.relation = 4;
-                        else if (!masked && !playerGrid && !sameFaction)//Not in player faction
+                        else if (!masked && !playerGrid && playerFaction != null && !sameFaction)//Not in player faction
                             signalData.relation = (byte)MyAPIGateway.Session.Factions.GetRelationBetweenFactions(playerFaction.FactionId, group.groupFactionID);
                         else if (sameFaction)//In player faction
                             signalData.relation = 3;
