@@ -90,247 +90,25 @@ namespace ThrustBeacon
 
         public override void UpdateBeforeSimulation()
         {
-            if (Client)
-            {
-                //Register client action of changing entity
-                if (!clientActionRegistered && Session?.Player?.Controller != null)
-                {
-                    clientActionRegistered = true;
-                    Session.Player.Controller.ControlledEntityChanged += GridChange;
-                    GridChange(null, Session.Player.Controller.ControlledEntity);
-                    MyLog.Default.WriteLineAndConsole(ModName + "Registered client ControlledEntityChanged action");
-                }
-
-                //Calc draw ratio figures based on resolution
-                if (symbolHeight == 0)
-                {
-                    aspectRatio = Session.Camera.ViewportSize.X / Session.Camera.ViewportSize.Y;
-                    symbolHeight = Settings.Instance.symbolWidth * aspectRatio;
-                    offscreenHeight = Settings.Instance.offscreenWidth * aspectRatio;
-                }
-
-                //If first load of this mod, send default settings request to server
-                if (firstLoad)
-                {
-                    Networking.SendToServer(new PacketRequestSettings(MyAPIGateway.Multiplayer.MyId));
-                    firstLoad = false;
-                    MyLog.Default.WriteLineAndConsole($"{ModName}: Requested default settings from server");
-                }
-            }
-
-            //Time keeps on ticking
             Tick++;
+            if (Client)
+                ClientTasks();
 
-            //Server timed updates
-            #region ServerUpdates
-            if (Server && Tick % 300 == 0)
-            {
-                //Find player controlled entities in range and broadcast to them
-                PlayerList.Clear();
-                if (MPActive)
-                    MyAPIGateway.Multiplayer.Players.GetPlayers(PlayerList);
-                else
-                    PlayerList.Add(Session.Player); //SP workaround
-            }
-            #endregion
-
-            //Server main loop
-            #region ServerLoop
             if (Server)
             {
-                var ss = ServerSettings.Instance;
-                //Update grid comps to recalc signals on a background thread.  Rand element to make blipping the gas to avoid detection harder
-                foreach (var group in GroupDict.Values)
+                if (Tick % 300 == 0) 
+                    ServerUpdatePlayers();
+                if (Tick % 5 == 0)
                 {
-                    //Skip grid comps without fat blocks
-                    if (group.groupFuncCount == 0)
-                        continue;
-                    //Recalc a grid on a rolling random frequency with a max age of 59 ticks
-                    //Using 236 in the rand to give an approx 1 in 4 chance of an early update, but no faster than every 15 ticks
-                    if (Tick - group.groupLastUpdate - 15 > rand.Next(236) || group.groupSpecialsDirty || Tick - group.groupLastUpdate > 59)
-                        MyAPIGateway.Parallel.StartBackground(group.UpdateGroup);
+                    if (powershutdownList.Count > 0)
+                        ServerPowerShutdown();
+                    if (thrustshutdownList.Count > 0)
+                        ServerThrustShutdown();
                 }
-
-                //Send requested logs
+                ServerUpdateGroups();
                 if (ReadyLogs.Count > 0)
-                {
-                    foreach (var readyLog in ReadyLogs)
-                    {
-                        Networking.SendToPlayer(new PacketStatsSend(readyLog.Key), readyLog.Value);
-                    }
-                    ReadyLogs.Clear();
-                }
-
-                //Update players if the last 2 digits of their identity ID = tick % 100 to spread out network updates.  If 100 ticks is too long, div by 2
-                var tickMod = Tick % 100;
-                foreach (var player in PlayerList)
-                {
-                    if (player == null || player.IsBot || player.Character == null || (MPActive && player.SteamUserId == 0) || (player.IdentityId % 100 != tickMod) || (!ServerSettings.Instance.SendSignalDataToSuits && player.Controller?.ControlledEntity is IMyCharacter))
-                    {
-                        continue;
-                    }
-
-                    var playerPos = player.Character.WorldAABB.Center;
-                    if (playerPos == Vector3D.Zero)
-                    {
-                        MyLog.Default.WriteLineAndConsole(ModName + $"Player position error - Vector3D.Zero - player.Name: {player.DisplayName} - player.SteamUserId: {player.SteamUserId}");
-                        continue;
-                    }
-
-                    //Pull modifiers for current players grid (IE if it has increased detection range)
-                    var controlledGrid = (IMyCubeGrid)player.Controller?.ControlledEntity?.Entity?.Parent;
-                    var playerGridDetectionModSqr = 0f;
-                    var playerGridDetailMod = 0f;
-                    if (controlledGrid != null)
-                    {
-                        GroupComp playerComp;
-                        if (GroupDict.TryGetValue(controlledGrid.GetGridGroup(GridLinkTypeEnum.Mechanical), out playerComp))
-                        { 
-                            //var playerComp = GroupDict[controlledGrid.GetGridGroup(GridLinkTypeEnum.Mechanical)];
-                            playerGridDetectionModSqr = playerComp.groupDetectionRange * playerComp.groupDetectionRange;
-                            if (playerComp.groupDetectionRange < 0)
-                                playerGridDetectionModSqr *= -1;
-                            playerGridDetailMod = playerComp.groupDetailMod;
-                        }
-                    }
-
-                    var playerFaction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(player.IdentityId);
-                    var validSignalList = new List<SignalComp>();
-                    var tempSignalList = new List<SignalComp>();
-
-                    //For each player, iterate each grid
-                    foreach (var group in GroupDict.Values)
-                    {
-                        var stealth = false;//((uint)grid.Grid.Flags & 0x20000000) > 0; //Stealth flag from Ash's mod
-                        var playerGrid = controlledGrid == null ?  false : group.GridDict.ContainsKey(controlledGrid);
-                        if ((!playerGrid && group.groupBroadcastDist < 2) || stealth || group.groupFuncCount == 0) continue;
-                        var gridPos = group.groupSphere.Center;
-                        var distToTargSqr = Vector3D.DistanceSquared(playerPos, gridPos);
-                        if (!playerGrid && distToTargSqr > group.groupBroadcastDistSqr + playerGridDetectionModSqr) continue; //Distance check
-
-                        //Check if occluded by a planet
-                        if (ss.EnablePlanetOcclusion)
-                        {
-                            var planetOcclusion = false;
-                            if (!playerGrid)
-                            {
-                                var dirRay = new RayD(playerPos, Vector3D.Normalize(gridPos - playerPos));//Pseudo ray from target to viewer
-                                foreach (var planet in planetSpheres)
-                                {
-                                    var hitDist = dirRay.Intersects(planet);
-                                    if (hitDist != null && hitDist * hitDist < distToTargSqr)//Check if ray hit planet sphere, and check if planet is beyond sig emitter
-                                    {
-                                        var onPlanet = planet.Contains(gridPos) == ContainmentType.Contains;//Check if on planet
-                                        if (!onPlanet || (onPlanet && Vector3D.DistanceSquared(planet.Center, gridPos) <= distToTargSqr))//Check if signal emitter or center of planet is closer, should catch cases where emitter is on the surface but not beyond horizon
-                                        {
-                                            planetOcclusion = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                            if (planetOcclusion) continue;
-                        }
-
-                        //Faction/relation checking and signal data compilation
-                        var masked = ss.EnableDataMasking && distToTargSqr > group.groupBroadcastDistSqr * (ss.DataMaskingRange + playerGridDetailMod) * (ss.DataMaskingRange + playerGridDetailMod);
-                        var sameFaction = playerFaction != null && playerFaction.FactionId == group.groupFactionID;
-                        var signalData = new SignalComp();
-                        signalData.position = (Vector3I)gridPos;
-                        signalData.range = playerGrid ? group.groupBroadcastDist : (int)Math.Sqrt(distToTargSqr);
-                        signalData.faction = masked && !sameFaction ? "" : group.groupFaction;
-                        signalData.entityID = playerGrid ? controlledGrid.EntityId : group.GridDict.FirstPair().Key.EntityId;
-                        signalData.sizeEnum = group.groupSizeEnum;
-                        if (playerGrid) //Own grid
-                            signalData.relation = 4;
-                        else if (!masked && !playerGrid && playerFaction != null && !sameFaction)//Not in player faction
-                            signalData.relation = (byte)MyAPIGateway.Session.Factions.GetRelationBetweenFactions(playerFaction.FactionId, group.groupFactionID);
-                        else if (sameFaction)//In player faction
-                            signalData.relation = 3;
-                        else if (!masked)//Factionless, presumed hostile
-                            signalData.relation = 1;
-                        else if (masked)//Outside detail range, mask data
-                            signalData.relation = 2;
-
-                        if (!useCombine || signalData.relation == 4 || signalData.range <= ss.CombineBeyond) //Add own grid or those within aggregate dist to final sig list
-                            validSignalList.Add(signalData);
-                        else
-                            tempSignalList.Add(signalData); //Add others to list for aggregate processing
-                    }
-
-
-                    //Aggregate signals by proximity
-                    var removalList = new List<int>();
-                    while (tempSignalList.Count > 0)
-                    {
-                        var sig = tempSignalList[0];
-                        tempSignalList.RemoveAtFast(0);
-                        for (int i = 0; i < tempSignalList.Count; i++) 
-                        {
-                            var checkSig = tempSignalList[i];
-                            if (sig.faction == checkSig.faction && Vector3.DistanceSquared(sig.position, checkSig.position) <= combineDistSqr) //Within aggregation distance
-                            {
-                                sig.position = (sig.position + checkSig.position) / 2;//Re-average position
-                                if(ss.CombineIncludeQuantity)
-                                    sig.quantity ++;
-                                if(ss.CombineIncrementSize && sig.sizeEnum < 5)
-                                    sig.sizeEnum ++;
-                                removalList.Add(i);
-                            }
-                        }
-                        validSignalList.Add(sig);
-                        if (removalList.Count > 0)
-                        {
-                            tempSignalList.RemoveIndices(removalList);
-                            removalList.Clear();
-                        }
-                    }
-
-
-                    //If there's anything to send to the player, fire it off via the Networking or call the packet received method for SP
-                    if (validSignalList.Count > 0)
-                    {
-                        var packet = new PacketSignals(validSignalList);
-                        if (MPActive)
-                            Networking.SendToPlayer(packet, player.SteamUserId);
-                        else
-                            packet.Received();
-                    }
-                }
-            }
-            #endregion
-
-            //Shutdown list updates in 5 tick interval to keep players from spamming keys to turn power back on.
-            //Alternative is to register actions when the grid is in the shut down list, then de-register when removed.
-            if (Server && Tick % 5 == 0 && powershutdownList.Count > 0)
-            {
-                foreach (var groupComp in powershutdownList.ToArray())
-                    groupComp.TogglePower();
-            }
-            if (Server && Tick % 5 == 0 && thrustshutdownList.Count > 0)
-            {
-                foreach (var groupComp in thrustshutdownList.ToArray())
-                    groupComp.ToggleThrust();
-            }
-
-            //Clientside list processing to deconflict items shown by WC Radar
-            if (Client && Settings.Instance.hideWC && Tick % 119 == 0)
-            {
-                var threatList = new List<MyTuple<MyEntity, float>>();
-                var obsList = new List<MyEntity>();
-                entityIDList.Clear();
-                var controlledEnt = MyAPIGateway.Session?.Player?.Controller?.ControlledEntity?.Entity?.Parent;
-                if (controlledEnt != null && controlledEnt is MyCubeGrid)
-                {
-                    //Scrape WC Data to one list of entities
-                    var myEnt = (MyEntity)controlledEnt;
-                    wcAPI.GetSortedThreats(myEnt, threatList);
-                    foreach (var item in threatList)
-                        entityIDList.Add(item.Item1.EntityId);
-                    wcAPI.GetObstructions(myEnt, obsList);
-                    foreach (var item in obsList)
-                        entityIDList.Add(item.EntityId);
-                }
+                    ServerSendLogs();
+                ServerMainLoop();
             }
         }
 
