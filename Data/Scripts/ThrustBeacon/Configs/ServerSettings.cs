@@ -37,6 +37,8 @@ namespace ThrustBeacon
             CombineIncrementSize = true,
             CombineIncludeQuantity = false,
             EnablePlanetOcclusion = true,
+            EnableBroadcastMirroringForNPCs = false,
+            EnableBroadcastMirroring = false,
         };
         [ProtoMember(1)]
         public bool IncludePowerInSignal { get; set; } = true;
@@ -112,7 +114,10 @@ namespace ThrustBeacon
         public bool CombineIncludeQuantity { get; set; } = false;
         [ProtoMember(37)]
         public bool EnablePlanetOcclusion { get; set; } = true;
-
+        [ProtoMember(38)]
+        public bool EnableBroadcastMirroringForNPCs { get; set; } = false;
+        [ProtoMember(39)]
+        public bool EnableBroadcastMirroring { get; set; } = false;
     }
     public partial class Session
     {

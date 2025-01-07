@@ -69,7 +69,7 @@ namespace ThrustBeacon
         {
             MPActive = MyAPIGateway.Multiplayer.MultiplayerActive;
             Server = (MPActive && MyAPIGateway.Multiplayer.IsServer) || !MPActive;
-            Client = (MPActive && !MyAPIGateway.Multiplayer.IsServer) || !MPActive;
+            Client = (MPActive && !MyAPIGateway.Utilities.IsDedicated) || !MPActive;
             if (Client)
             {
                 InitConfig();

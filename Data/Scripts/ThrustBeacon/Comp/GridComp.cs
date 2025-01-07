@@ -14,6 +14,8 @@ namespace ThrustBeacon
         internal Dictionary<IMyPowerProducer, int> powerList = new Dictionary<IMyPowerProducer, int>();
         internal List<MyEntity> weaponList = new List<MyEntity>();
         internal List<MyCubeBlock> specials = new List<MyCubeBlock>();
+        internal List<MyCubeBlock> broadcasters = new List<MyCubeBlock>();
+
         //internal ConcurrentDictionary<IMyThrust, float> thrustMonitor = new ConcurrentDictionary<IMyThrust, float>();
         internal IMyGridGroupData group;
 
@@ -29,6 +31,7 @@ namespace ThrustBeacon
         internal bool gridLogging = false;
         internal string gridLog = "";
         internal float detailRange = 0f;
+        internal bool isNPC = false;
         
         internal void Init(MyCubeGrid grid, IMyGridGroupData myGroup)
         {
@@ -39,9 +42,7 @@ namespace ThrustBeacon
             Grid.OnBlockOwnershipChanged += OnBlockOwnershipChanged;
             gridSize = Grid.GridSizeEnum;
             foreach (var fat in Grid.GetFatBlocks())
-            {
                 FatBlockAdded(fat);
-            }
             RecalcSpecials();
         }
 
@@ -51,6 +52,7 @@ namespace ThrustBeacon
             {
                 var faction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(grid.BigOwners[0]);
                 factionID = faction == null ? 0 : faction.FactionId;
+                isNPC = Session.npcFactions.Contains(factionID);
             }
         }
 
@@ -61,6 +63,7 @@ namespace ThrustBeacon
             {
                 var faction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(Grid.BigOwners[0]);
                 factionID = faction == null ? 0 : faction.FactionId;
+                isNPC = Session.npcFactions.Contains(factionID);
             }
 
             var subTypeID = block.BlockDefinition.Id.SubtypeId;
@@ -97,6 +100,10 @@ namespace ThrustBeacon
                 if (func != null)
                     func.EnabledChanged += Func_EnabledChanged;                  
             }
+
+            //Checks if the block is a vanilla broadcaster
+            if (block is IMyRadioAntenna || block is IMyBeacon)
+                broadcasters.Add(block);
 
             //Functional count, rolls up to the group and is used in weighing the largest faction
             if (block is IMyFunctionalBlock)
@@ -148,6 +155,8 @@ namespace ThrustBeacon
                 if (func != null)
                     func.EnabledChanged -= Func_EnabledChanged;
             }
+            if (block is IMyRadioAntenna || block is IMyBeacon)
+                broadcasters.Remove(block);
             if (block is IMyFunctionalBlock)
             {
                 funcCount--;
@@ -189,7 +198,7 @@ namespace ThrustBeacon
             broadcastDist = 0;
 
             //Check if signal should be suppressed.  Needs to be here to report a zero sig to the grid group.
-            if (ss.SuppressSignalForNPCs && Session.npcFactions.Contains(factionID))
+            if (ss.SuppressSignalForNPCs && isNPC)
                 return;
 
             if (specialsDirty)
@@ -270,6 +279,25 @@ namespace ThrustBeacon
             //SignalRange increase from specials
             broadcastDist += (int)signalRange;
 
+            //Catchall if antenna/beacon broadcast is below "signal" output
+            if ((ss.EnableBroadcastMirroringForNPCs && isNPC) || (ss.EnableBroadcastMirroring && !isNPC))
+            {
+                var maxRange = 0f;
+                foreach (var broadcaster in broadcasters.ToArray())
+                {
+                    var antenna = broadcaster as IMyRadioAntenna;
+                    var beacon = broadcaster as IMyBeacon;
+
+                    if (antenna != null && !antenna.MarkedForClose && antenna.IsBroadcasting && antenna.Radius > maxRange)
+                        maxRange = antenna.Radius;
+                    else if (beacon != null && !beacon.MarkedForClose && beacon.IsWorking && beacon.Radius > maxRange && !beacon.CustomName.Contains("[PRI]"))
+                        maxRange = beacon.Radius;
+                }
+
+                if (maxRange > broadcastDist)
+                    broadcastDist = (int)maxRange;
+            }
+
             //Logging rollup
             if (gridLogging)
             {
@@ -340,6 +368,7 @@ namespace ThrustBeacon
                 if (func != null)
                     func.EnabledChanged -= Func_EnabledChanged;
             }
+            broadcasters.Clear();
             specials.Clear();
             broadcastDist = 0;
         }
