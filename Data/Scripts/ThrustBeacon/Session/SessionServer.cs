@@ -13,8 +13,6 @@ namespace ThrustBeacon
     {
         private void ServerUpdatePlayers()
         {
-            //Find player controlled entities in range and broadcast to them
-            //TODO clean this up to be more efficient
             PlayerList.Clear();
             if (MPActive)
                 MyAPIGateway.Multiplayer.Players.GetPlayers(PlayerList);
@@ -63,16 +61,9 @@ namespace ThrustBeacon
             foreach (var player in PlayerList)
             {
                 if (player == null || player.IsBot || player.Character == null || (MPActive && player.SteamUserId == 0) || (player.IdentityId % 100 != tickMod) || (!ServerSettings.Instance.SendSignalDataToSuits && player.Controller?.ControlledEntity is IMyCharacter))
-                {
                     continue;
-                }
 
                 var playerPos = player.Character.WorldAABB.Center;
-                if (playerPos == Vector3D.Zero)
-                {
-                    MyLog.Default.WriteLineAndConsole(ModName + $"Player position error - Vector3D.Zero - player.Name: {player.DisplayName} - player.SteamUserId: {player.SteamUserId}");
-                    continue;
-                }
 
                 //Pull modifiers for current players grid (IE if it has increased detection range)
                 var controlledGrid = (IMyCubeGrid)player.Controller?.ControlledEntity?.Entity?.Parent;
@@ -157,7 +148,6 @@ namespace ThrustBeacon
                 }
 
                 //Aggregate signals by proximity
-                var removalList = new List<int>();
                 while (tempSignalList.Count > 0)
                 {
                     var sig = tempSignalList[0];
@@ -176,11 +166,8 @@ namespace ThrustBeacon
                         }
                     }
                     validSignalList.Add(sig);
-                    if (removalList.Count > 0)
-                    {
-                        tempSignalList.RemoveIndices(removalList);
-                        removalList.Clear();
-                    }
+                    tempSignalList.RemoveIndices(removalList);
+                    removalList.Clear();
                 }
 
                 //If there's anything to send to the player, fire it off via the Networking or call the packet received method for SP

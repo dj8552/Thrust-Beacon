@@ -6,6 +6,7 @@ using VRage.Utils;
 using Sandbox.Game.Entities;
 using VRage.Game.Entity;
 using VRage;
+using Draygo.API;
 
 namespace ThrustBeacon
 {
@@ -16,6 +17,7 @@ namespace ThrustBeacon
             //Register client action of changing entity
             if (!clientActionRegistered && Session?.Player?.Controller != null)
             {
+                ownShipLabel = new HudAPIv2.HUDMessage(null, Settings.Instance.signalDrawCoords, null, -1, Settings.Instance.textSizeOwn, true, true);
                 clientActionRegistered = true;
                 Session.Player.Controller.ControlledEntityChanged += GridChange;
                 GridChange(null, Session.Player.Controller.ControlledEntity);
@@ -39,7 +41,7 @@ namespace ThrustBeacon
             }
 
             //Clientside list processing to deconflict items shown by WC Radar
-            if (Settings.Instance.hideWC && Tick % 119 == 0)
+            if (Settings.Instance.hideWC && Tick % 59 == 0)
             {
                 var threatList = new List<MyTuple<MyEntity, float>>();
                 var obsList = new List<MyEntity>();

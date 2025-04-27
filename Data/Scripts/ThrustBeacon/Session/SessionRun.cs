@@ -11,8 +11,6 @@ using VRage.Game.ModAPI;
 using DefenseShields;
 using Sandbox.Game;
 using Sandbox.Game.Entities;
-using VRage.Game.Entity;
-using VRage;
 using VRage.ModAPI;
 
 namespace ThrustBeacon
@@ -20,6 +18,10 @@ namespace ThrustBeacon
     [MySessionComponentDescriptor(MyUpdateOrder.BeforeSimulation)]
     public partial class Session : MySessionComponentBase
     {
+        public Session()
+        {
+            Api = new ApiBackend(this);
+        }
         public override void BeforeStart()
         {
             Networking.Register();
@@ -41,8 +43,9 @@ namespace ThrustBeacon
                     FactionCreated(faction.Key);
                 //Hook connection event to send label list
                 MyVisualScriptLogicProvider.PlayerConnected += PlayerConnected;
+                MyEntities.OnEntityCreate += OnEntityCreate;
             }
-            if(Client)
+            if (Client)
             {
                 MyAPIGateway.Utilities.MessageEnteredSender += OnMessageEnteredSender;
             }
@@ -96,6 +99,8 @@ namespace ThrustBeacon
 
             if (Server)
             {
+                if (!PbApiInited && Tick % 119 == 0 && PbActivate)
+                    Api.PbInit();
                 if (Tick % 300 == 0) 
                     ServerUpdatePlayers();
                 if (Tick % 5 == 0)
@@ -127,6 +132,7 @@ namespace ThrustBeacon
                 catch { }
                 MyVisualScriptLogicProvider.PlayerConnected -= PlayerConnected;
                 Session.Factions.FactionCreated -= FactionCreated;
+                MyEntities.OnEntityCreate -= OnEntityCreate;
             }
             if (Client)
             {

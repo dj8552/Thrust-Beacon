@@ -159,6 +159,8 @@
     <Compile Include="Data\Scripts\ThrustBeacon\APIs\CoreSystemsApiBase.cs" />
     <Compile Include="Data\Scripts\ThrustBeacon\APIs\DSApi.cs" />
     <Compile Include="Data\Scripts\ThrustBeacon\APIs\HudAPIv2.cs" />
+    <Compile Include="Data\Scripts\ThrustBeacon\APIs\PBApiBackend.cs" />
+    <Compile Include="Data\Scripts\ThrustBeacon\APIs\ThrustBeaconPBApi.cs" />
     <Compile Include="Data\Scripts\ThrustBeacon\Comp\GroupComp.cs" />
     <Compile Include="Data\Scripts\ThrustBeacon\Comp\GridComp.cs" />
     <Compile Include="Data\Scripts\ThrustBeacon\Comp\SignalComp.cs" />

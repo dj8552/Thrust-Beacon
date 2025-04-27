@@ -1,11 +1,10 @@
 ﻿using Digi.Example_NetworkProtobuf;
 using Sandbox.Game.Entities;
-using Sandbox.Game.Entities.Cube;
 using Sandbox.ModAPI;
 using System;
 using System.Collections.Generic;
-using VRage.Game;
 using VRage.Game.Components;
+using VRage.Game.Entity;
 using VRage.Game.ModAPI;
 using VRage.ModAPI;
 using VRage.Utils;
@@ -21,24 +20,16 @@ namespace ThrustBeacon
             List<VRage.Game.MyDefinitionId> tempWeaponDefs = new List<VRage.Game.MyDefinitionId>();
             wcAPI.GetAllCoreWeapons(tempWeaponDefs);
             foreach (var def in tempWeaponDefs)
-            {
                 weaponSubtypeIDs.Add(def.SubtypeId);
-            }
             MyLog.Default.WriteLineAndConsole($"{ModName}Registered {weaponSubtypeIDs.Count} weapon block types");
         }
 
         //Send newly connected clients server-specific data (label text)
         private void PlayerConnected(long playerId)
         {
-            MyLog.Default.WriteLineAndConsole($"{ModName}Player connected " + playerId);
             var steamId = MyAPIGateway.Multiplayer.Players.TryGetSteamId(playerId);
             if (steamId != 0)
-            {
                 Networking.SendToPlayer(new PacketSettings(messageList, ServerSettings.Instance.UpdateBeaconOnControlledGrid), steamId);
-                MyLog.Default.WriteLineAndConsole($"{ModName}Sent settings to player " + steamId);
-            }
-            else
-                MyLog.Default.WriteLineAndConsole($"{ModName}Failed to find steam ID for playerId " + playerId);
         }
 
         //Dump current signals when hopping out of a grid
@@ -55,13 +46,18 @@ namespace ThrustBeacon
                     primaryBeacon.Radius = 0;
                     Beacon_OnClosing(primaryBeacon);
                 }
+                ownShipLabel.Visible = false;
             }
-            else if (newEnt is IMyCubeBlock && clientUpdateBeacon && !newEnt.Entity.MarkedForClose)
+            else if (newEnt is IMyCubeBlock && !newEnt.Entity.MarkedForClose)
             {
+                var block = newEnt as IMyCubeBlock;
+                var entGrid = (MyCubeGrid)block.CubeGrid;
+                controlledGridParent = entGrid.GetTopMostParent().EntityId;
+                ownShipLabel.Visible = true;
+                ownShipLabel.Message = null;
+                if(clientUpdateBeacon)
                 try
                 {
-                    var block = newEnt as IMyCubeBlock;
-                    var entGrid = (MyCubeGrid)block.CubeGrid;
                     var group = entGrid.GetGridGroup(GridLinkTypeEnum.Mechanical);
                     var groupGridList = new List<IMyCubeGrid>();
                     group.GetGrids(groupGridList);
@@ -198,6 +194,11 @@ namespace ThrustBeacon
             }
             return;
         }
-
+        internal void OnEntityCreate(MyEntity entity)
+        {
+            if (!PbApiInited && entity is IMyProgrammableBlock)
+                PbActivate = true;
+            MyEntities.OnEntityCreate -= OnEntityCreate;
+        }
     }
 }

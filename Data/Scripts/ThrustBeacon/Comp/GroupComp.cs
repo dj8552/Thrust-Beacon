@@ -1,9 +1,7 @@
-﻿using Digi.Example_NetworkProtobuf;
-using Sandbox.Game.Entities;
+﻿using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
 using System.Collections.Generic;
 using VRage.Game.ModAPI;
-using VRage.Utils;
 using VRageMath;
 
 namespace ThrustBeacon

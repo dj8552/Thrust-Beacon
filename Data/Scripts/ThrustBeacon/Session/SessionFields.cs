@@ -2,7 +2,6 @@
 using DefenseShields;
 using Digi.Example_NetworkProtobuf;
 using Draygo.API;
-using ProtoBuf;
 using Sandbox.ModAPI;
 using System;
 using System.Collections.Concurrent;
@@ -26,9 +25,9 @@ namespace ThrustBeacon
         internal static HudAPIv2 hudAPI;
         internal static WcApi wcAPI;
         internal static ShieldApi dsAPI;
-        public static Networking Networking = new Networking(1212); //TODO: Pick a new number based on mod ID
-        Random rand = new Random();
-        internal static string ModName = "[Thrust Beacon]"; //Since I may change the name, this is used in logging
+        public static Networking Networking = new Networking(1212);
+        public static Random rand = new Random();
+        internal static string ModName = "[Thrust Beacon]";
         internal static List<string> messageList = new List<string>() { "Idle Sig", "Small Sig", "Medium Sig", "Large Sig", "Huge Sig", "Massive Sig", "OVERHEAT - SHUTDOWN" };
 
         //Client specific
@@ -56,6 +55,8 @@ namespace ThrustBeacon
         internal static List<long> entityIDList = new List<long>();
         internal int lastLogRequestTick = 0;
         internal static bool firstLoad = false;
+        internal long controlledGridParent = 0;
+        internal HudAPIv2.HUDMessage ownShipLabel;
 
         //Server specific
         internal static readonly List<MyStringHash> weaponSubtypeIDs = new List<MyStringHash>();
@@ -72,34 +73,21 @@ namespace ThrustBeacon
         internal HashSet<IMyEntity> entityHash = new HashSet<IMyEntity>();
         internal long combineDistSqr;
         internal bool useCombine;
+        internal ApiBackend Api;
+        internal bool PbApiInited;
+        internal bool PbActivate;
+        internal Dictionary<IMyTerminalBlock, int> PbDict = new Dictionary<IMyTerminalBlock, int>();
+        internal List<int> removalList = new List<int>();
+
 
         private void Clean()
         {
-            BlockConfigs.Clear();
             SignalProducer.Clear();
-            weaponSubtypeIDs.Clear();
+            BlockConfigs.Clear();
             GroupDict.Clear();
             ReadyLogs.Clear();
             planetSpheres.Clear();
-        }
-
-        //Seamless
-        public enum ClientMessageType
-        {
-            FirstJoin,
-            TransferServer,
-            OnlinePlayers,
-        }
-
-        [ProtoContract]
-        public class ClientMessage
-        {
-            [ProtoMember(1)] public ClientMessageType MessageType;
-            [ProtoMember(2)] public byte[] MessageData;
-            [ProtoMember(3)] public long IdentityID;
-            [ProtoMember(4)] public ulong SteamID;
-            [ProtoMember(5)] public string PluginVersion = "0";
-            [ProtoMember(6)] public string NexusVersion;
+            PbDict.Clear();
         }
     }
 }

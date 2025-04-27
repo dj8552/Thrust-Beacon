@@ -9,17 +9,15 @@ using VRageMath;
 namespace ThrustBeacon
 {
     public partial class Session : MySessionComponentBase
-    {
-      
+    {      
         //Main clientside loop for visuals
         public override void Draw()
         {
-            if (Client && hudAPI.Heartbeat && SignalList.Count > 0 && MyAPIGateway.Session.Config.HudState != 0 && !MyAPIGateway.Gui.IsCursorVisible)
+            if (Client && clientActionRegistered && hudAPI.Heartbeat && SignalList.Count > 0 && MyAPIGateway.Session.Config.HudState != 0 && !MyAPIGateway.Gui.IsCursorVisible)
             {
                 var s = Settings.Instance;
                 var viewProjectionMat = Session.Camera.ViewMatrix * Session.Camera.ProjectionMatrix;
                 var camPos = Session.Camera.Position;
-                var playerEnt = MyAPIGateway.Session?.Player?.Controller?.ControlledEntity?.Entity?.Parent?.EntityId; //TODO eval if necessary with relation = 4 enum OR tap into GridChange event for this entityID cached as a session field
 
                 //Draw main signal list
                 foreach (var signal in SignalList.ToArray())
@@ -31,7 +29,7 @@ namespace ThrustBeacon
                         continue;
 
                     //Signal for own occupied grid
-                    if (contact.entityID == playerEnt || contact.relation == 4)
+                    if (contact.entityID == controlledGridParent || contact.relation == 4)
                     {
                         var dispRange = contact.range > 1000 ? (contact.range / 1000f).ToString("0.#") + " km" : contact.range + " m";
                         //Coloration and flashing for warning
@@ -41,8 +39,7 @@ namespace ThrustBeacon
                         else if (contact.sizeEnum == 5 && (Tick + 15) % 60 <= 20)
                             warnColor = "<color=255, 255, 0>";
                         var info = new StringBuilder($"Broadcast Dist: " + dispRange + "\n" + "Size: " + warnColor + messageList[contact.sizeEnum]);
-                        var Label = new HudAPIv2.HUDMessage(info, s.signalDrawCoords, null, 2, s.textSizeOwn, true, true);  //TODO pull this to a single declared label and update visibility on GridChange?
-                        Label.Visible = true;
+                        ownShipLabel.Message = info;
 
                         //Optional beacon updates
                         if(clientUpdateBeacon && Tick % 29 == 0 && primaryBeacon != null)
@@ -63,7 +60,7 @@ namespace ThrustBeacon
                                 SignalList.Remove(signal.Key);
                             continue;
                         }
-                        float distance = Vector3.Distance(contact.position, camPos); //TODO Explore using contact.range
+                        float distance = Vector3.Distance(contact.position, camPos);
                         if (distance < s.hideDistance) continue;
 
                         //Color and fade over time effect
@@ -87,8 +84,6 @@ namespace ThrustBeacon
                             var symbolPosition = new Vector2D(screenCoords.X, screenCoords.Y);
                             var labelPosition = new Vector2D(screenCoords.X + (s.symbolWidth * 0.25), screenCoords.Y + (symbolHeight * 0.4));
                             var dispRange = distance > 1000 ? (distance / 1000).ToString("0.#") + " km" : distance.ToString("0.#") + " m";
-                            //var dispSize = contact.range > 1000 ? (contact.range / 1000).ToString("0.#") + " km" : contact.range.ToString("0.#") + " m";
-                            //var info = new StringBuilder(contact.faction + " " + dispSize + " sig " + "\n" + dispRange); //Testing alternate display
                             var qty = contact.quantity > 1 ? contact.quantity + "x " : "";
                             var info = new StringBuilder(qty + contact.faction + messageList[contact.sizeEnum] + "\n" + dispRange);
                             var Label = new HudAPIv2.HUDMessage(info, labelPosition, new Vector2D(0, -0.001), 2, s.textSize, true, true);

@@ -204,30 +204,37 @@ namespace ThrustBeacon
         private void IncreaseOwnSz()
         {
             Settings.Instance.textSizeOwn += 0.025f;
+            ownShipLabel.Scale = Settings.Instance.textSizeOwn;
         }
         private void DecreaseOwnSz()
         {
             Settings.Instance.textSizeOwn -= 0.025f;
+            ownShipLabel.Scale = Settings.Instance.textSizeOwn;
         }
         private void LeftMove()
         {
-            Settings.Instance.signalDrawCoords += new Vector2D(-0.01, 0);
+            Settings.Instance.signalDrawCoords += new Vector2D(-0.005, 0);
+            ownShipLabel.Origin = Settings.Instance.signalDrawCoords;
         }
         private void RightMove()
         {
-            Settings.Instance.signalDrawCoords += new Vector2D(0.01, 0);
+            Settings.Instance.signalDrawCoords += new Vector2D(0.005, 0);
+            ownShipLabel.Origin = Settings.Instance.signalDrawCoords;
         }
         private void UpMove()
         {
-            Settings.Instance.signalDrawCoords += new Vector2D(0, 0.01);
+            Settings.Instance.signalDrawCoords += new Vector2D(0, 0.005 * aspectRatio);
+            ownShipLabel.Origin = Settings.Instance.signalDrawCoords;
         }
         private void DownMove()
         {
-            Settings.Instance.signalDrawCoords += new Vector2D(0, -0.01);
+            Settings.Instance.signalDrawCoords += new Vector2D(0, -0.005 * aspectRatio);
+            ownShipLabel.Origin = Settings.Instance.signalDrawCoords;
         }
         private void ResetMove()
         {
             Settings.Instance.signalDrawCoords = new Vector2D(-0.7, -0.625);
+            ownShipLabel.Origin = Settings.Instance.signalDrawCoords;
         }
         private void ColorFriend(Color obj)
         {

@@ -1,7 +1,4 @@
-﻿using System;
-using Sandbox.ModAPI;
-using VRage.Game;
-using VRage.Utils;
+﻿using Sandbox.ModAPI;
 
 namespace Digi.Example_NetworkProtobuf
 {
@@ -14,26 +11,20 @@ namespace Digi.Example_NetworkProtobuf
         }
         public void Register()
         {
-            MyAPIGateway.Multiplayer.RegisterMessageHandler(ChannelId, ReceivedPacket);
-        }
-        public void Unregister()
-        {
-            MyAPIGateway.Multiplayer.UnregisterMessageHandler(ChannelId, ReceivedPacket);
+            MyAPIGateway.Multiplayer.RegisterSecureMessageHandler(ChannelId, ReceivedPacket);
         }
 
-        private void ReceivedPacket(byte[] rawData) // executed when a packet is received on this machine
+        public void Unregister()
         {
-            try
-            {
-                var packet = MyAPIGateway.Utilities.SerializeFromBinary<PacketBase>(rawData);
-                packet.Received();
-            }
-            catch (Exception e)
-            {
-                MyLog.Default.WriteLineAndConsole($"{e.Message}\n{e.StackTrace}");
-                if (MyAPIGateway.Session?.Player != null)
-                    MyAPIGateway.Utilities.ShowNotification($"ERROR: {GetType().FullName}: {e.Message} | Send SpaceEngineers.Log to mod author]", 10000, MyFontEnum.Red);
-            }
+            MyAPIGateway.Multiplayer.UnregisterSecureMessageHandler(ChannelId, ReceivedPacket);
+        }
+
+        private void ReceivedPacket(ushort handlerID, byte[] rawData, ulong ID, bool server)
+        {
+            if (!server)
+                return;
+            var packet = MyAPIGateway.Utilities.SerializeFromBinary<PacketBase>(rawData);
+            packet.Received();
         }
 
         public void SendToPlayer(PacketBase packet, ulong steamId)

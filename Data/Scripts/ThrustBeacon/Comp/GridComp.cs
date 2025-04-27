@@ -1,6 +1,5 @@
 ﻿using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using VRage.Game.Entity;
 using VRage.Game.ModAPI;
@@ -15,10 +14,7 @@ namespace ThrustBeacon
         internal List<MyEntity> weaponList = new List<MyEntity>();
         internal List<MyCubeBlock> specials = new List<MyCubeBlock>();
         internal List<MyCubeBlock> broadcasters = new List<MyCubeBlock>();
-
-        //internal ConcurrentDictionary<IMyThrust, float> thrustMonitor = new ConcurrentDictionary<IMyThrust, float>();
         internal IMyGridGroupData group;
-
         internal int broadcastDist;
         internal int broadcastDistOld;
         internal long factionID = 0;
@@ -85,8 +81,6 @@ namespace ThrustBeacon
                 if (!Session.SignalProducer.TryGetValue(subTypeID.ToString(), out divisor))
                     divisor = ServerSettings.Instance.DefaultThrustDivisor;
                 thrustList.Add(thruster, divisor);
-                //thrustMonitor.TryAdd(thruster, thruster.CurrentThrust);
-                //thruster.ThrustChanged += Thruster_ThrustChanged;
             }
             else if (weapon)
                 weaponList.Add(block);
@@ -114,15 +108,6 @@ namespace ThrustBeacon
             }
         }
 
-        //Values are throttle % as 0-100
-        //With W, drops from 100 on next tick if thruster cannot meet demand (power)
-        //With overrides .CurrentThrust shows commanded override- not actual (FFS Keen)
-        private void Thruster_ThrustChanged(IMyThrust thruster, float oldValue, float newValue)
-        {
-            //if(newValue > oldValue && thrustMonitor[thruster] < thruster.CurrentThrust)
-                //thrustMonitor[thruster] = thruster.CurrentThrust;
-        }
-
         //Monitors specialty blocks that alter signal for Enabled changing
         private void Func_EnabledChanged(IMyTerminalBlock obj)
         {
@@ -137,12 +122,7 @@ namespace ThrustBeacon
             var weapon = Session.weaponSubtypeIDs.Contains(block.BlockDefinition.Id.SubtypeId);
 
             if (thrust != null)
-            {
                 thrustList.Remove(thrust);
-                //thrust.ThrustChanged -= Thruster_ThrustChanged;
-                //float peak;
-                //thrustMonitor.TryRemove(thrust, out peak);
-            }
             else if (power != null)
                 powerList.Remove(power);
             else if (weapon)
@@ -211,11 +191,10 @@ namespace ThrustBeacon
                 double rawThrustOutput = 0.0d;
                 foreach (var thrust in thrustList)
                 {
-                    var thrustOutput = thrust.Key.CurrentThrust; //thrustMonitor[thrust.Key];
+                    var thrustOutput = thrust.Key.CurrentThrust;
                     if (thrustOutput == 0 || !thrust.Key.IsFunctional)
                         continue;
                     rawThrustOutput += thrustOutput / thrust.Value;
-                    //thrustMonitor[thrust.Key] = thrust.Key.CurrentThrust; //Write current value in case it's lower than the rolling peak
                 }
                 finalThrust += (int)rawThrustOutput;
             }
@@ -266,7 +245,7 @@ namespace ThrustBeacon
 
 
             //Cooldown
-            if (broadcastDistOld > broadcastDist)// || Grid.IsStatic)
+            if (broadcastDistOld > broadcastDist)
             {
                 //Reworked cooldown to normalize to a per second value, since recalcs are on a variable schedule
                 var partialCoolDown = (broadcastDistOld - broadcastDistOld * coolDownRate) * ((float)(Session.Tick - Session.GroupDict[group].groupLastUpdate) / 59);
@@ -354,11 +333,6 @@ namespace ThrustBeacon
             Grid.OnFatBlockAdded -= FatBlockAdded;
             Grid.OnFatBlockRemoved -= FatBlockRemoved;
             Grid.OnBlockOwnershipChanged -= OnBlockOwnershipChanged;
-            
-            //foreach (var thruster in thrustMonitor.Keys)
-                //thruster.ThrustChanged -= Thruster_ThrustChanged;
-            //thrustMonitor.Clear();
-
             Grid = null;
             thrustList.Clear();
             powerList.Clear();
