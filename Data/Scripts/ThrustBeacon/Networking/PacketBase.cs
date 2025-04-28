@@ -27,6 +27,26 @@ namespace Digi.Example_NetworkProtobuf
     }
 
     [ProtoContract]
+    public partial class ServerPackets : PacketBase
+    {
+        [ProtoMember(50)]
+        public List<SignalComp> otherServerSignals;
+
+        public ServerPackets() { }
+
+        public ServerPackets(List<SignalComp> Signals)
+        {
+            otherServerSignals = Signals;
+        }
+
+        public override bool Received()
+        {
+            Session.SignalsFromOtherServers = otherServerSignals;
+            return false;
+        }
+    }
+
+    [ProtoContract]
     public partial class PacketSignals : PacketBase
     {
         [ProtoMember(100)]

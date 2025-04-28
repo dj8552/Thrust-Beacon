@@ -53,6 +53,11 @@ namespace ThrustBeacon
             ReadyLogs.Clear();
         }
 
+        private void ServerShareSignals()
+        {
+            
+        }
+
         private void ServerMainLoop()
         {
             var ss = ServerSettings.Instance;
@@ -145,9 +150,28 @@ namespace ThrustBeacon
                         validSignalList.Add(signalData);
                     else
                         tempSignalList.Add(signalData); //Add others to list for aggregate processing
+
+                    if (NexusV2Enabled)
+                    {
+                        var signals = new ServerPackets(tempSignalList);
+                        var serializedSignals = MyAPIGateway.Utilities.SerializeToBinary(signals);
+                        NexusV2API.SendMessageToAllServers(serializedSignals);
+                    }
+                    else if (NexusV3Enabled)
+                    {
+                        var signals = new ServerPackets(tempSignalList);
+                        var serializedSignals = MyAPIGateway.Utilities.SerializeToBinary(signals);
+                        NexusV3API.SendModMsgToAllServers(serializedSignals, NetworkId);
+                    }
                 }
 
                 //Aggregate signals by proximity
+                if (SignalsFromOtherServers.Count > 0)
+                {
+                    tempSignalList.AddRange(SignalsFromOtherServers);
+                    SignalsFromOtherServers.Clear();
+                }
+
                 while (tempSignalList.Count > 0)
                 {
                     var sig = tempSignalList[0];

@@ -12,6 +12,7 @@ using DefenseShields;
 using Sandbox.Game;
 using Sandbox.Game.Entities;
 using VRage.ModAPI;
+using NexusModAPI;
 
 namespace ThrustBeacon
 {
@@ -44,6 +45,16 @@ namespace ThrustBeacon
                 //Hook connection event to send label list
                 MyVisualScriptLogicProvider.PlayerConnected += PlayerConnected;
                 MyEntities.OnEntityCreate += OnEntityCreate;
+
+                NexusV2API = new NexusV2API(NexusNetworkId);
+                NexusV3API = new NexusV3API(NexusV3APIEnabled);
+                if (NexusV2API.IsRunningNexus())
+                {
+                    NexusV2Enabled = true;
+                    NexusV3API.Unload();
+                    NexusV3API = null;
+                    NexusV3Enabled = false;
+                }
             }
             if (Client)
             {
@@ -53,6 +64,13 @@ namespace ThrustBeacon
             //Init WC and register all defs on callback
             wcAPI = new WcApi();
             wcAPI.Load(RegisterWCDefs, true);
+        }
+
+        private void NexusV3APIEnabled()
+        {
+            NexusV3Enabled = true;
+            NexusV2Enabled = false;
+            NexusV2API = null;
         }
 
         private bool CheckPlanets(IMyEntity entity)
@@ -133,6 +151,8 @@ namespace ThrustBeacon
                 MyVisualScriptLogicProvider.PlayerConnected -= PlayerConnected;
                 Session.Factions.FactionCreated -= FactionCreated;
                 MyEntities.OnEntityCreate -= OnEntityCreate;
+                NexusV3API.Unload();
+                NexusV3Enabled = false;
             }
             if (Client)
             {

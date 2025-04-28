@@ -10,8 +10,10 @@ using VRage;
 using VRage.Game.Components;
 using VRage.Game.ModAPI;
 using VRage.ModAPI;
+using VRage.Network;
 using VRage.Utils;
 using VRageMath;
+using NexusModAPI;
 
 namespace ThrustBeacon
 {
@@ -25,7 +27,9 @@ namespace ThrustBeacon
         internal static HudAPIv2 hudAPI;
         internal static WcApi wcAPI;
         internal static ShieldApi dsAPI;
-        public static Networking Networking = new Networking(1212);
+        public static ushort NetworkId = 1212;
+        public static ushort NexusNetworkId = 1213;
+        public static Networking Networking = new Networking(NetworkId, NexusNetworkId);
         public static Random rand = new Random();
         internal static string ModName = "[Thrust Beacon]";
         internal static List<string> messageList = new List<string>() { "Idle Sig", "Small Sig", "Medium Sig", "Large Sig", "Huge Sig", "Massive Sig", "OVERHEAT - SHUTDOWN" };
@@ -78,6 +82,11 @@ namespace ThrustBeacon
         internal bool PbActivate;
         internal Dictionary<IMyTerminalBlock, int> PbDict = new Dictionary<IMyTerminalBlock, int>();
         internal List<int> removalList = new List<int>();
+        internal static NexusV3API NexusV3API = null;
+        internal static bool NexusV3Enabled = false;
+        internal static NexusV2API NexusV2API = null;
+        internal static bool NexusV2Enabled = false;
+        internal static List<SignalComp> SignalsFromOtherServers = new List<SignalComp>();
 
 
         private void Clean()
