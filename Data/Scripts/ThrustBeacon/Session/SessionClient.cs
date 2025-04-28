@@ -15,7 +15,7 @@ namespace ThrustBeacon
         private void ClientTasks()
         {
             //Register client action of changing entity
-            if (!clientActionRegistered && Session?.Player?.Controller != null)
+            if (!clientActionRegistered && Session?.Player?.Controller != null && hudAPI.Heartbeat)
             {
                 ownShipLabel = new HudAPIv2.HUDMessage(null, Settings.Instance.signalDrawCoords, null, -1, Settings.Instance.textSizeOwn, true, true);
                 clientActionRegistered = true;
